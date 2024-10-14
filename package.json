@@ -14,7 +14,8 @@
     "dotenv": "^10.0.0",
     "ffmpeg": "0.0.4",
     "ffmpeg-static": "^4.4.0",
-    "node-cron": "^3.0.0"
+    "node-cron": "^3.0.0",
+    "@discordjs/voice": "^0.17.0"
   },
   "devDependencies": {},
   "repository": {
