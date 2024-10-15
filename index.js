@@ -1,11 +1,18 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordnpjs/voice');
+
+const fs = require('fs');
+const path = require('path');
 
 const { ActivityType } = require('discord.js');
+const { File } = require('buffer');
 
 const { TOKEN, CLIENT_ID } = process.env;
 
+const audioDirectory = "./Audio_Files" //The MP3 audio directory
+
+let latestAudioFile = null;
 
 const client = new Client({
 	intents: [
@@ -61,13 +68,35 @@ client.once('ready', async () => {
 
 });
 
+function getRandomAudioFile() { // Gets a random audio file from the audio directory
+    const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3'));
+	// If only one file is present, return it
+    if (files.length === 1) {
+        return path.join(audioDirectory, files[0]);
+    }
+
+	let randomIndex;
+    let selectedFile;
+
+	// Keep picking a random file until it's different from the last one
+    do {
+        randomIndex = Math.floor(Math.random() * files.length);
+        selectedFile = path.join(audioDirectory, files[randomIndex]);
+    } while (selectedFile === latestAudioFile);
+    
+    // Update the latest audio file to the new one
+    latestAudioFile = selectedFile;
+    
+    return selectedFile;
+}
+
 let audioPlayer;
 let audioResource;
 
 function playerAudio(channel) {
 	if (!audioPlayer) {
 		audioPlayer = createAudioPlayer();
-		audioResource = createAudioResource('DORON.mp3');
+		audioResource = getRandomAudioFile(); //Gets the random audio file
 
 		audioPlayer.play(audioResource);
 		const connection = joinVoiceChannel({
@@ -97,6 +126,40 @@ function playerAudio(channel) {
 	}
 }
 
+
+function joinAndPlaySound(channel) {
+	try {
+
+		const connection = joinVoiceChannel({
+			channelId: channel.id,
+			guildId: channel.guild.id,
+			adapterCreator: channel.guild.voiceAdapterCreator,
+
+		});
+
+		const player = createAudioPlayer();
+		const resource = createAudioResource('DORON.mp3');
+
+		player.play(resource);
+		connection.subscribe(player);
+
+		player.on(AudioPlayerStatus.Idle, () => {
+
+			connection.destroy();
+
+		});
+
+	} catch (error) {
+		console.error('Error joining and playing sound:', error);
+	}
+}
+
+function timeOut(newState) {
+	setTimeout(() => {
+		joinAndPlaySound(newState.channel)
+	}, 500);
+};
+
 function handleVoiceStateUpdate(oldState, newState) {
 	if (newState.member.id === DoronID) {
 		if (!oldState.channel && newState.channel) {
@@ -105,68 +168,48 @@ function handleVoiceStateUpdate(oldState, newState) {
 			timeOut(newState)
 		} else if (!newState.channel) {
 			// User left the channel
-            const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
-            audioPlayer = null;
+			const connection = getVoiceConnection(oldState.guild.id);
+			if (connection) connection.destroy();
+			audioPlayer = null;
 		}
+	}
 
-	} 
+	//Check if the bot itself was disconnected
+	if (oldState.member.id === client.user.id && !newState.channel) {
+		console.log(`Bot was disconnected from ${oldState.channel.name}`);
+
+		//Check if Doron disconnected the bot
+		const disconnectionUser = oldState.guild.members.cache.get(DoronID);
+		if (disconnectionUser && oldState.channel) {
+			console.log(`${disconnectionUser.user.tag} disconnected the bot from the channel.`);
+
+			timeOut(oldState.channel)
+
+		}
+	}
 }
 
 
-	function joinAndPlaySound(channel) {
-		try {
+client.on('interactionCreate', async interaction => {
+	if (!interaction.isCommand()) return;
 
-			const connection = joinVoiceChannel({
-				channelId: channel.id,
-				guildId: channel.guild.id,
-				adapterCreator: channel.guild.voiceAdapterCreator,
+	const { commandName } = interaction;
 
-			});
+	if (commandName === 'summon') {
+		const invokingMember = interaction.member;
 
-			const player = createAudioPlayer();
-			const resource = createAudioResource('DORON.mp3');
-
-			player.play(resource);
-			connection.subscribe(player);
-
-			player.on(AudioPlayerStatus.Idle, () => {
-
-				connection.destroy();
-
-			});
-
-		} catch (error) {
-			console.error('Error joining and playing sound:', error);
+		if (!invokingMember.voice.channel) {
+			return interaction.reply({ content: 'You must be in a voice channel to summon me.' });
 		}
+
+		const voiceChannel = invokingMember.voice.channel;
+		joinAndPlaySound(voiceChannel);
+
 	}
-	function timeOut(newState) {
-		setTimeout(() => {
-			joinAndPlaySound(newState.channel)
-		}, 1500);
-	};
+});
 
-
-	client.on('interactionCreate', async interaction => {
-		if (!interaction.isCommand()) return;
-
-		const { commandName } = interaction;
-
-		if (commandName === 'summon') {
-			const invokingMember = interaction.member;
-
-			if (!invokingMember.voice.channel) {
-				return interaction.reply({ content: 'You must be in a voice channel to summon me.' });
-			}
-
-			const voiceChannel = invokingMember.voice.channel;
-			joinAndPlaySound(voiceChannel);
-
-		}
-	});
-
-	client.on('voiceStateUpdate', handleVoiceStateUpdate);
+client.on('voiceStateUpdate', handleVoiceStateUpdate);
 
 
 
-	client.login(TOKEN);
+client.login(TOKEN);
