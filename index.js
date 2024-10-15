@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChannelType } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
 
 const fs = require('fs');
@@ -29,7 +29,20 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path || require('ffmpeg-s
 const commands = [
 	new SlashCommandBuilder()
 		.setName('summon')
-		.setDescription('Summon me for Doron ;)')
+		.setDescription('Summon me for Doron ;))')
+		.addChannelOption(option => 
+			option.setName('channel')
+			    .setDescription('Choose the channel to summon me in (optional)')
+				.setRequired(false))
+				.addChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice),
+	new SlashCommandBuilder()
+	    .setName('summonfull')
+		.setDescription("Summon me for Doron le full ;))")
+		.addChannelOption(option => 
+			option.setName('channel')
+			    .setDescription('Choose the channel to summon me in (optional)')
+				.setRequired(false))
+				.addChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice),
 ].map(command => command.toJSON());
 
 const GUILD_ID = "1022540810589319168";
@@ -93,15 +106,34 @@ function getRandomAudioFile() { // Gets a random audio file from the audio direc
 let audioPlayer;
 let audioResource;
 
-function playerAudio(channel) {
+function playerAudio(channel, full = false) {
 	if (!channel) {
 		console.error('Channel is undefined, unable to join or play audio');
 		return;
 	}
 
+	client.user.setPresence({
+		status: 'online',
+		activities: [{
+			name: 'Thirsting for Doron rn',
+			type: ActivityType.Custom,
+			//state: 'For The Hour...',
+		}]
+	});
+
 	if (!audioPlayer) {
 		audioPlayer = createAudioPlayer();
-		audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
+		let audioResource;
+		if (full) {
+			audioResource = createAudioResource('./Audio_Files/DORON.mp3')
+		} else {
+			audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
+		}
+
+		if (!audioResource) {
+			console.error('Failed to create audio resource, unable to join or play audio');
+            return;
+		}
 
 		audioPlayer.play(audioResource);
 		const connection = joinVoiceChannel({
@@ -118,6 +150,15 @@ function playerAudio(channel) {
 			const currentConnection = getVoiceConnection(channel.guild.id);
 			if (currentConnection) {
 				currentConnection.destroy();
+				client.user.setPresence({
+					status: 'idle',
+					activities: [{
+						name: 'For Doron...',
+						type: ActivityType.Watching,
+						//state: 'For The Hour...',
+					}]
+				});
+
 			}
 
 			// Reset the audio player and resource for future use
@@ -171,7 +212,7 @@ function playerAudio(channel) {
 
 function timeOut(newState) {
 	setTimeout(() => {
-		playerAudio(newState.channel)
+		playerAudio(newState.channel, false)
 	}, 500);
 };
 
@@ -186,6 +227,14 @@ function handleVoiceStateUpdate(oldState, newState) {
 			const connection = getVoiceConnection(oldState.guild.id);
 			if (connection) connection.destroy();
 			audioPlayer = null;
+			client.user.setPresence({
+				status: 'idle',
+				activities: [{
+					name: 'For Doron...',
+					type: ActivityType.Watching,
+					//state: 'For The Hour...',
+				}]
+			});
 		}
 	}
 
@@ -212,18 +261,38 @@ client.on('interactionCreate', async interaction => {
 
 	if (commandName === 'summon') {
 		const invokingMember = interaction.member;
+		
+		const selectedChannel = interaction.options.getChannel('channel');
 
-		if (!invokingMember.voice.channel) {
-			return interaction.reply({ content: 'You must be in a voice channel to summon me.'});
+		let voiceChannel;
+
+		if (selectedChannel && selectedChannel.isVoiceBased()) {
+			voiceChannel = selectedChannel;
+		} else if (invokingMember.voice.channel) {
+			voiceChannel = invokingMember.voice.channel;
+		} else {
+			return interaction.reply({ content: 'I cannot find a voice channel for you. Make sure you are in one.' });
 		}
 
-		const voiceChannel = invokingMember.voice.channel;
+		playerAudio(voiceChannel, false)
+		await interaction.deferReply({ ephemeral: true});
+	} else if (commandName === 'summonfull') {
+		const invokingMember = interaction.member;
+		
+		const selectedChannel = interaction.options.getChannel('channel');
 
-		// Defer the reply silently (ephemeral means only the user who invoked will see it, but we won't follow up)
-		await interaction.deferReply({ ephemeral: true });
+		let voiceChannel;
 
-		// Play the audio after joining the voice channel
-		playerAudio(voiceChannel);
+		if (selectedChannel && selectedChannel.isVoiceBased()) {
+			voiceChannel = selectedChannel;
+		} else if (invokingMember.voice.channel) {
+			voiceChannel = invokingMember.voice.channel;
+		} else {
+			return interaction.reply({ content: 'I cannot find a voice channel for you. Make sure you are in one.' });
+		}
+
+		playerAudio(voiceChannel, true)
+		await interaction.deferReply({ ephemeral: true});
 	}
 });
 
