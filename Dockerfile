@@ -22,8 +22,5 @@ ARG DISCORD_CLIENT
 ENV TOKEN="$DISCORD_TOKEN"
 ENV CLIENT_ID="$DISCORD_CLIENT"
 
-echo "TOKEN: $TOKEN"
-echo "CLIENT_ID: $CLIENT_ID"
-
 # Command to run the application
 CMD ["node", "index.js"]
