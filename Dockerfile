@@ -17,8 +17,8 @@ COPY . .
 EXPOSE 3000
 
 # Define environment variables
-ENV TOKEN= $DISCORD_TOKEN
-ENV CLIENT_ID= $DISCORD_CLIENT
+ENV TOKEN=$DISCORD_TOKEN
+ENV CLIENT_ID=$DISCORD_CLIENT
 
 # Command to run the application
 CMD ["node", "index.js"]
