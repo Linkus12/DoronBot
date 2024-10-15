@@ -1,4 +1,3 @@
-//This is a test
 require('dotenv').config();
 const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
@@ -21,7 +20,7 @@ const client = new Client({
 		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.GuildMembers,
 	]
-});
+});https://github.com/Linkus12/DoronBot/settings
 
 const DoronID = '435868622825586688'
 
