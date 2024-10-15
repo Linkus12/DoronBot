@@ -9,7 +9,9 @@ const path = require('path');
 const { ActivityType } = require('discord.js');
 const { File } = require('buffer');
 
-const { TOKEN, CLIENT_ID } = process.env;
+const { TOKEN } = process.env;
+
+let CLIENT_ID;
 
 console.log(`ZE TOKEN!! TOKEN: ${TOKEN}`);
 console.log(`ZE CLIENT!! CLIENT_ID: ${CLIENT_ID}`);
@@ -79,6 +81,9 @@ client.once('ready', async () => {
 			//state: 'For The Hour...',
 		}]
 	});
+
+	CLIENT_ID = `${client.user.id}`;
+
 	await registerSpecificCommand(commands);
 	registerCommand(commands);
 	console.log('Doron is ready ;) ...');
