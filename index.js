@@ -127,37 +127,37 @@ function playerAudio(channel) {
 }
 
 
-function joinAndPlaySound(channel) {
-	try {
+// function joinAndPlaySound(channel) {
+// 	try {
 
-		const connection = joinVoiceChannel({
-			channelId: channel.id,
-			guildId: channel.guild.id,
-			adapterCreator: channel.guild.voiceAdapterCreator,
+// 		const connection = joinVoiceChannel({
+// 			channelId: channel.id,
+// 			guildId: channel.guild.id,
+// 			adapterCreator: channel.guild.voiceAdapterCreator,
 
-		});
+// 		});
 		
-		playerAudio(channel);
-	// 	const player = createAudioPlayer();
-	// 	const resource = createAudioResource('DORON.mp3');
+// 		playerAudio(channel);
+// 	// 	const player = createAudioPlayer();
+// 	// 	const resource = createAudioResource('DORON.mp3');
 
-	// 	player.play(resource);
-	// 	connection.subscribe(player);
+// 	// 	player.play(resource);
+// 	// 	connection.subscribe(player);
 
-	// 	player.on(AudioPlayerStatus.Idle, () => {
+// 	// 	player.on(AudioPlayerStatus.Idle, () => {
 
-	// 		connection.destroy();
+// 	// 		connection.destroy();
 
-	// 	});
+// 	// 	});
 
-	} catch (error) {
-		console.error('Error joining and playing sound:', error);
-	}
-}
+// 	} catch (error) {
+// 		console.error('Error joining and playing sound:', error);
+// 	}
+// }
 
 function timeOut(newState) {
 	setTimeout(() => {
-		joinAndPlaySound(newState.channel)
+		playerAudio(newState.channel)
 	}, 500);
 };
 
