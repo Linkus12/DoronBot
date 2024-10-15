@@ -100,7 +100,7 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: '22'
-          
+
       - name: Install Dependencies
         run: npm install
 
@@ -108,5 +108,5 @@ jobs:
         env:
           TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CLIENT_ID: ${{ secrets.DISCORD_CLIENT }}
-        run: node index.js
+        # run: node index.js
 
