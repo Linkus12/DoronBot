@@ -243,17 +243,57 @@ function timeOut(newState) {
 	}, 500);
 };
 
-function handleVoiceStateUpdate(oldState, newState) {
-    if (newState.member.id === DoronID) {
-        if (!oldState.channel && newState.channel) {
-            timeOut(newState); // Doron joined a channel
-        } else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
-            timeOut(newState); // Doron switched channels
-        } else if (!newState.channel) {
-            // Doron left the channel
-            const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy(); // Disconnect the bot if Doron leaves
-            audioPlayer = null;
+function playerAudio(channel, full = false) {
+    // Check if Debounce is true to prevent multiple audio playbacks or rejoining
+    if (Debounce) {
+        console.log('Debounce is active, skipping audio playback or reconnection.');
+        return;
+    }
+
+    Debounce = true; // Set debounce here when audio starts playing
+
+    if (!channel) {
+        console.error('Channel is undefined, unable to join or play audio');
+        return;
+    }
+
+    client.user.setPresence({
+        status: 'online',
+        activities: [{
+            name: 'Thirsting for Doron rn',
+            type: ActivityType.Custom,
+        }]
+    });
+
+    if (!audioPlayer) {
+        audioPlayer = createAudioPlayer();
+        let audioResource;
+        if (full) {
+            audioResource = createAudioResource('./Audio_Files/DORON.mp3');
+        } else {
+            audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
+        }
+
+        if (!audioResource) {
+            console.error('Failed to create audio resource, unable to join or play audio');
+            return;
+        }
+
+        audioPlayer.play(audioResource);
+
+        const connection = joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator,
+        });
+
+        connection.subscribe(audioPlayer);
+
+        // Handle disconnections explicitly
+        connection.on('disconnect', () => {
+            console.log('Bot was disconnected from the channel');
+            audioPlayer = null; // Reset the audio player
+            Debounce = false;   // Reset debounce
             client.user.setPresence({
                 status: 'idle',
                 activities: [{
@@ -261,71 +301,43 @@ function handleVoiceStateUpdate(oldState, newState) {
                     type: ActivityType.Watching,
                 }]
             });
-            Debounce = false; // Reset debounce when Doron leaves
-        }
-    }
+        });
 
-    // Check if the bot itself was disconnected
-    if (oldState.member.id === client.user.id && !newState.channel) {
-        console.log(`Bot was disconnected from ${oldState.channel.name}`);
-
-        // Check who disconnected the bot
-        const disconnectionUser = oldState.guild.members.cache.get(DoronID);
-        
-        // If Doron disconnected the bot, rejoin the channel
-        if (disconnectionUser && oldState.channel) {
-            console.log(`${disconnectionUser.user.tag} disconnected the bot from the channel.`);
-            
-            // Rejoin the same channel after a 0.5-second delay
-            setTimeout(() => {
-                console.log(`Rejoining ${oldState.channel.name}`);
-                const newConnection = joinVoiceChannel({
-                    channelId: oldState.channel.id,
-                    guildId: oldState.guild.id,
-                    adapterCreator: oldState.guild.voiceAdapterCreator,
-                });
-
-                // Initialize audioPlayer if it's null
-                if (!audioPlayer) {
-                    audioPlayer = createAudioPlayer(); // Ensure audioPlayer is initialized
-                }
-
-                // Subscribe to the audioPlayer
-                const subscription = newConnection.subscribe(audioPlayer);
-                if (subscription) {
-                    console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
-                } else {
-                    console.log('Subscription failed');
-                }
-
-                // Reset bot presence
+        // Listen for the audio player becoming idle and disconnect after audio is finished
+        audioPlayer.on(AudioPlayerStatus.Idle, () => {
+            const currentConnection = getVoiceConnection(channel.guild.id);
+            if (currentConnection) {
+                currentConnection.destroy(); // Destroy the connection
                 client.user.setPresence({
-                    status: 'online',
+                    status: 'idle',
                     activities: [{
-                        name: 'Thirsting for Doron rn',
-                        type: ActivityType.Custom,
+                        name: 'For Doron...',
+                        type: ActivityType.Watching,
                     }]
                 });
-            }, 500); // 0.5-second delay before rejoining
-        } else {
-            // Someone else disconnected the bot - stop audio and destroy connection
-            console.log('Someone else disconnected the bot, stopping audio and destroying connection.');
-            const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) {
-                connection.destroy(); // Destroy the connection
-                console.log('Connection destroyed.');
+                Debounce = false; // Reset debounce after playback ends
             }
-            audioPlayer = null; // Clear the audioPlayer
-            client.user.setPresence({
-                status: 'idle',
-                activities: [{
-                    name: 'Waiting for Doron...',
-                    type: ActivityType.Watching,
-                }]
+
+            // Reset the audio player and resource for future use
+            audioPlayer = null;
+            audioResource = null;
+        });
+    } else {
+        // If the player is already active, switch channels or reconnect
+        const connection = getVoiceConnection(channel.guild.id);
+        if (!connection) {
+            const newConnection = joinVoiceChannel({
+                channelId: channel.id,
+                guildId: channel.guild.id,
+                adapterCreator: channel.guild.voiceAdapterCreator,
             });
+            newConnection.subscribe(audioPlayer);
         }
     }
 }
+
+
+
 
 
 
