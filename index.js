@@ -94,7 +94,6 @@ let audioPlayer;
 let audioResource;
 
 function playerAudio(channel) {
-
 	if (!channel) {
 		console.error('Channel is undefined, unable to join or play audio');
 		return;
@@ -102,7 +101,7 @@ function playerAudio(channel) {
 
 	if (!audioPlayer) {
 		audioPlayer = createAudioPlayer();
-		audioResource = createAudioResource(getRandomAudioFile()); //Gets the random audio file
+		audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
 
 		audioPlayer.play(audioResource);
 		const connection = joinVoiceChannel({
@@ -111,26 +110,35 @@ function playerAudio(channel) {
 			adapterCreator: channel.guild.voiceAdapterCreator,
 		});
 
-		connection.subscribe(audioPlayer)
+		connection.subscribe(audioPlayer);
 
+		// Listen for the audio player becoming idle and disconnect after audio is finished
 		audioPlayer.on(AudioPlayerStatus.Idle, () => {
-			audioPlayer.stop();
+			// Destroy the voice connection when the player is idle
+			const currentConnection = getVoiceConnection(channel.guild.id);
+			if (currentConnection) {
+				currentConnection.destroy();
+			}
+
+			// Reset the audio player and resource for future use
+			audioPlayer = null;
+			audioResource = null;
 		});
 	} else {
-		//If player is playing, switch channels
+		// If the player is already active, switch channels or reconnect
 		const connection = getVoiceConnection(channel.guild.id);
 		if (!connection) {
-			//If not connected, join a new voice channel
+			// If not connected, join a new voice channel
 			const newConnection = joinVoiceChannel({
 				channelId: channel.id,
 				guildId: channel.guild.id,
 				adapterCreator: channel.guild.voiceAdapterCreator,
 			});
-			newConnection.subscribe(audioPlayer)
+			newConnection.subscribe(audioPlayer);
 		}
-		//If the player is already playing then do nothing :>
 	}
 }
+
 
 
 // function joinAndPlaySound(channel) {
