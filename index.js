@@ -246,15 +246,16 @@ function timeOut(newState) {
 };
 
 function handleVoiceStateUpdate(oldState, newState) {
-    // Detect if the user (DoronID) is moving or leaving channels
+    // Detect when Doron switches channels or leaves
     if (newState.member.id === DoronID) {
         if (!oldState.channel && newState.channel) {
-            timeOut(newState);
+            timeOut(newState); // Doron joined a channel
         } else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
-            timeOut(newState);
+            timeOut(newState); // Doron switched channels
         } else if (!newState.channel) {
+            // Doron left the channel
             const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
+            if (connection) connection.destroy(); // Disconnect the bot if Doron leaves
             audioPlayer = null;
             client.user.setPresence({
                 status: 'idle',
@@ -263,30 +264,42 @@ function handleVoiceStateUpdate(oldState, newState) {
                     type: ActivityType.Watching,
                 }]
             });
-            Debounce = false; // Reset Debounce when Doron leaves
+            Debounce = false; // Reset debounce when Doron leaves
         }
     }
 
-    // Check if the bot itself was disconnected from the voice channel
+    // Check if the bot itself was disconnected
     if (oldState.member.id === client.user.id && !newState.channel) {
-        console.log(`Bot was disconnected from ${oldState.channel ? oldState.channel.name : 'the voice channel'}`);
-        
-        // Reset bot state if disconnected
-        const connection = getVoiceConnection(oldState.guild.id);
-        if (connection) connection.destroy();
+        console.log(`Bot was disconnected from ${oldState.channel.name}`);
 
-        audioPlayer = null; // Reset audio player
-        Debounce = false;   // Reset debounce
+        // Check if Doron disconnected the bot
+        const disconnectionUser = oldState.guild.members.cache.get(DoronID);
+        if (disconnectionUser && oldState.channel) {
+            console.log(`${disconnectionUser.user.tag} disconnected the bot from the channel.`);
+            
+            // Rejoin the same channel after a short delay
+            setTimeout(() => {
+                console.log(`Rejoining ${oldState.channel.name}`);
+                const newConnection = joinVoiceChannel({
+                    channelId: oldState.channel.id,
+                    guildId: oldState.guild.id,
+                    adapterCreator: oldState.guild.voiceAdapterCreator,
+                });
+                newConnection.subscribe(audioPlayer);
 
-        client.user.setPresence({
-            status: 'idle',
-            activities: [{
-                name: 'For Doron...',
-                type: ActivityType.Watching,
-            }]
-        });
+                // Reset bot presence
+                client.user.setPresence({
+                    status: 'online',
+                    activities: [{
+                        name: 'Thirsting for Doron rn',
+                        type: ActivityType.Custom,
+                    }]
+                });
+            }, 1000); // 1-second delay before rejoining
+        }
     }
 }
+
 
 
 
