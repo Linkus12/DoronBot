@@ -28,4 +28,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ github.repository_owner }}/doron-bot:latest
+        tags: ghcr.io/linkus12/doron-bot:latest
