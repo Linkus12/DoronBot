@@ -210,7 +210,7 @@ client.on('interactionCreate', async interaction => {
 		}
 
 		const voiceChannel = invokingMember.voice.channel;
-		joinAndPlaySound(voiceChannel);
+		playerAudio(voiceChannel);
 
 	}
 });
