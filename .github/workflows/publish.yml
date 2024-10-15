@@ -1,4 +1,4 @@
-name: DoronDocker
+name: dorondocker
 
 on:
   push:
@@ -20,11 +20,11 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.GITI_ACTOR }}
+          password: ${{ secrets.GITI_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/DoronBot:latest
+          tags: ghcr.io/linkus12/doronbot:latest
