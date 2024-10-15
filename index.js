@@ -30,7 +30,8 @@ const client = new Client({
 	]
 });
 
-const DoronID = '435868622825586688'
+// const DoronID = '435868622825586688'
+const DoronID = '193547487208931328'
 
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path || require('ffmpeg-static');
 
