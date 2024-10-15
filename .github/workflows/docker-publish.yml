@@ -85,8 +85,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args:
-           DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
-           DISCORD_CLIENT=${{ secrets.DISCORD_CLIENT }}
+           DISCORD_TOKEN="${{ secrets.DISCORD_TOKEN }}"
+           DISCORD_CLIENT="${{ secrets.DISCORD_CLIENT }}"
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
