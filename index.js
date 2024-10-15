@@ -96,7 +96,7 @@ let audioResource;
 function playerAudio(channel) {
 	if (!audioPlayer) {
 		audioPlayer = createAudioPlayer();
-		audioResource = getRandomAudioFile(); //Gets the random audio file
+		audioResource = createAudioResource(getRandomAudioFile()); //Gets the random audio file
 
 		audioPlayer.play(audioResource);
 		const connection = joinVoiceChannel({
