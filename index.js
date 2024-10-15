@@ -94,6 +94,12 @@ let audioPlayer;
 let audioResource;
 
 function playerAudio(channel) {
+
+	if (!channel) {
+		console.error('Channel is undefined, unable to join or play audio');
+		return;
+	}
+
 	if (!audioPlayer) {
 		audioPlayer = createAudioPlayer();
 		audioResource = createAudioResource(getRandomAudioFile()); //Gets the random audio file
