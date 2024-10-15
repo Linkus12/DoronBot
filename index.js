@@ -136,18 +136,19 @@ function joinAndPlaySound(channel) {
 			adapterCreator: channel.guild.voiceAdapterCreator,
 
 		});
+		
+		playerAudio(channel);
+	// 	const player = createAudioPlayer();
+	// 	const resource = createAudioResource('DORON.mp3');
 
-		const player = createAudioPlayer();
-		const resource = createAudioResource('DORON.mp3');
+	// 	player.play(resource);
+	// 	connection.subscribe(player);
 
-		player.play(resource);
-		connection.subscribe(player);
+	// 	player.on(AudioPlayerStatus.Idle, () => {
 
-		player.on(AudioPlayerStatus.Idle, () => {
+	// 		connection.destroy();
 
-			connection.destroy();
-
-		});
+	// 	});
 
 	} catch (error) {
 		console.error('Error joining and playing sound:', error);
