@@ -247,7 +247,6 @@ function timeOut(newState) {
 };
 
 function handleVoiceStateUpdate(oldState, newState) {
-    // Detect when Doron switches channels or leaves
     if (newState.member.id === DoronID) {
         if (!oldState.channel && newState.channel) {
             timeOut(newState); // Doron joined a channel
@@ -273,12 +272,14 @@ function handleVoiceStateUpdate(oldState, newState) {
     if (oldState.member.id === client.user.id && !newState.channel) {
         console.log(`Bot was disconnected from ${oldState.channel.name}`);
 
-        // Check if Doron disconnected the bot
+        // Check who disconnected the bot
         const disconnectionUser = oldState.guild.members.cache.get(DoronID);
+        
+        // If Doron disconnected the bot, rejoin the channel
         if (disconnectionUser && oldState.channel) {
             console.log(`${disconnectionUser.user.tag} disconnected the bot from the channel.`);
             
-            // Rejoin the same channel after a short delay
+            // Rejoin the same channel after a 0.5-second delay
             setTimeout(() => {
                 console.log(`Rejoining ${oldState.channel.name}`);
                 const newConnection = joinVoiceChannel({
@@ -286,7 +287,19 @@ function handleVoiceStateUpdate(oldState, newState) {
                     guildId: oldState.guild.id,
                     adapterCreator: oldState.guild.voiceAdapterCreator,
                 });
-                newConnection.subscribe(audioPlayer);
+
+                // Initialize audioPlayer if it's null
+                if (!audioPlayer) {
+                    audioPlayer = createAudioPlayer(); // Ensure audioPlayer is initialized
+                }
+
+                // Subscribe to the audioPlayer
+                const subscription = newConnection.subscribe(audioPlayer);
+                if (subscription) {
+                    console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+                } else {
+                    console.log('Subscription failed');
+                }
 
                 // Reset bot presence
                 client.user.setPresence({
@@ -296,10 +309,28 @@ function handleVoiceStateUpdate(oldState, newState) {
                         type: ActivityType.Custom,
                     }]
                 });
-            }, 1000); // 1-second delay before rejoining
+            }, 500); // 0.5-second delay before rejoining
+        } else {
+            // Someone else disconnected the bot - stop audio and destroy connection
+            console.log('Someone else disconnected the bot, stopping audio and destroying connection.');
+            const connection = getVoiceConnection(oldState.guild.id);
+            if (connection) {
+                connection.destroy(); // Destroy the connection
+                console.log('Connection destroyed.');
+            }
+            audioPlayer = null; // Clear the audioPlayer
+            client.user.setPresence({
+                status: 'idle',
+                activities: [{
+                    name: 'Waiting for Doron...',
+                    type: ActivityType.Watching,
+                }]
+            });
         }
     }
 }
+
+
 
 
 
