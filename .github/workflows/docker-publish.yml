@@ -26,6 +26,11 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Run bot
+      env:
+        DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+        CLIENT_ID: ${{ secrets.DISCORD_CLIENT }}
+      run: node index.js
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
