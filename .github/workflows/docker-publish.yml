@@ -78,7 +78,5 @@ jobs:
           push: true
           tags: ghcr.io/linkus12/doronbot:latest
           secrets: |
-            DISCORD_TOKEN= ${{ secrets.DISCORD_TOKEN }}
-            DISCORD_CLIENT_ID= ${{ secrets.DISCORD_CLIENT }}
-
-
+            DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+            DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT }}
