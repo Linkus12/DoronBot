@@ -119,9 +119,6 @@ let audioPlayer;
 let audioResource;
 
 function playerAudio(channel, full = false) {
-    if (Debounce) {
-        return;
-    }
     Debounce = true; // Set debounce here when audio starts playing
 
     if (!channel) {
