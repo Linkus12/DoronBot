@@ -20,7 +20,7 @@ jobs:
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
-        username: ${{ GITI.ACTOR }}
+        username: ${{ secrets.GITI.ACTOR }}
         password: ${{ secrets.GITI_TOKEN }}
 
     - name: Build and push Docker image
