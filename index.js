@@ -20,6 +20,8 @@ const audioDirectory = "./Audio_Files" //The MP3 audio directory
 
 let latestAudioFile = null;
 
+let Debounce = false;
+
 const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
@@ -115,79 +117,77 @@ function getRandomAudioFile() { // Gets a random audio file from the audio direc
 let audioPlayer;
 let audioResource;
 
-function playerAudio(channel, full = false) {
-	if (!channel) {
-		console.error('Channel is undefined, unable to join or play audio');
-		return;
-	}
+async function playerAudio(channel, full = false) {
+    if (!channel) {
+        console.error('Channel is undefined, unable to join or play audio');
+        return;
+    }
 
-	client.user.setPresence({
-		status: 'online',
-		activities: [{
-			name: 'Thirsting for Doron rn',
-			type: ActivityType.Custom,
-			//state: 'For The Hour...',
-		}]
-	});
+    client.user.setPresence({
+        status: 'online',
+        activities: [{
+            name: 'Thirsting for Doron rn',
+            type: ActivityType.Custom,
+        }]
+    });
 
-	if (!audioPlayer) {
-		audioPlayer = createAudioPlayer();
-		let audioResource;
-		if (full) {
-			audioResource = createAudioResource('./Audio_Files/DORON.mp3')
-		} else {
-			audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
-		}
+    if (!audioPlayer) {
+        audioPlayer = createAudioPlayer();
+        let audioResource;
+        if (full) {
+            audioResource = createAudioResource('./Audio_Files/DORON.mp3');
+        } else {
+            audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
+        }
 
-		if (!audioResource) {
-			console.error('Failed to create audio resource, unable to join or play audio');
+        if (!audioResource) {
+            console.error('Failed to create audio resource, unable to join or play audio');
             return;
-		}
+        }
 
-		audioPlayer.play(audioResource);
-		const connection = joinVoiceChannel({
-			channelId: channel.id,
-			guildId: channel.guild.id,
-			adapterCreator: channel.guild.voiceAdapterCreator,
-		});
+        audioPlayer.play(audioResource);
+        Debounce = true; // Set debounce here when audio starts playing
 
-		connection.subscribe(audioPlayer);
+        const connection = joinVoiceChannel({
+            channelId: channel.id,
+            guildId: channel.guild.id,
+            adapterCreator: channel.guild.voiceAdapterCreator,
+        });
 
-		// Listen for the audio player becoming idle and disconnect after audio is finished
-		audioPlayer.on(AudioPlayerStatus.Idle, () => {
-			// Destroy the voice connection when the player is idle
-			const currentConnection = getVoiceConnection(channel.guild.id);
-			if (currentConnection) {
-				currentConnection.destroy();
-				client.user.setPresence({
-					status: 'idle',
-					activities: [{
-						name: 'For Doron...',
-						type: ActivityType.Watching,
-						//state: 'For The Hour...',
-					}]
-				});
+        connection.subscribe(audioPlayer);
 
-			}
+        audioPlayer.on(AudioPlayerStatus.Idle, () => {
+            const currentConnection = getVoiceConnection(channel.guild.id);
+            if (currentConnection) {
+                currentConnection.destroy();
+                client.user.setPresence({
+                    status: 'idle',
+                    activities: [{
+                        name: 'For Doron...',
+                        type: ActivityType.Watching,
+                    }]
+                });
+            }
 
-			// Reset the audio player and resource for future use
-			audioPlayer = null;
-			audioResource = null;
-		});
-	} else {
-		// If the player is already active, switch channels or reconnect
-		const connection = getVoiceConnection(channel.guild.id);
-		if (!connection) {
-			// If not connected, join a new voice channel
-			const newConnection = joinVoiceChannel({
-				channelId: channel.id,
-				guildId: channel.guild.id,
-				adapterCreator: channel.guild.voiceAdapterCreator,
-			});
-			newConnection.subscribe(audioPlayer);
-		}
-	}
+            // Reset the audio player and resource for future use
+            audioPlayer = null;
+            audioResource = null;
+            Debounce = false; // Reset debounce here after playback ends
+        });
+    } else {
+        // If the player is already active, switch channels or reconnect
+        const connection = getVoiceConnection(channel.guild.id);
+        if (!connection) {
+            const newConnection = joinVoiceChannel({
+                channelId: channel.id,
+                guildId: channel.guild.id,
+                adapterCreator: channel.guild.voiceAdapterCreator,
+            });
+            newConnection.subscribe(audioPlayer);
+        }
+    }
 }
+
 
 
 
@@ -264,46 +264,49 @@ function handleVoiceStateUpdate(oldState, newState) {
 
 
 client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
+    if (!interaction.isCommand()) return;
 
-	const { commandName } = interaction;
+    const { commandName } = interaction;
 
-	if (commandName === 'summon') {
-		const invokingMember = interaction.member;
-		
-		const selectedChannel = interaction.options.getChannel('channel');
+    if (Debounce) {
+        return interaction.reply({ content: `Yo nigga I'm currently thirsting for Doron nigga, wait yo turn.` });
+    }
 
-		let voiceChannel;
+    if (commandName === 'summon') {
+        const invokingMember = interaction.member;
+        const selectedChannel = interaction.options.getChannel('channel');
 
-		if (selectedChannel && selectedChannel.isVoiceBased()) {
-			voiceChannel = selectedChannel;
-		} else if (invokingMember.voice.channel) {
-			voiceChannel = invokingMember.voice.channel;
-		} else {
-			return interaction.reply({ content: 'I cannot find a voice channel for you. Make sure you are in one.' });
-		}
+        let voiceChannel;
 
-		playerAudio(voiceChannel, false)
-		await interaction.deferReply({ ephemeral: true});
-	} else if (commandName === 'summonfull') {
-		const invokingMember = interaction.member;
-		
-		const selectedChannel = interaction.options.getChannel('channel');
+        if (selectedChannel && selectedChannel.isVoiceBased()) {
+            voiceChannel = selectedChannel;
+        } else if (invokingMember.voice.channel) {
+            voiceChannel = invokingMember.voice.channel;
+        } else {
+            return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.` });
+        }
 
-		let voiceChannel;
+        playerAudio(voiceChannel, false);
+        await interaction.deferReply({ ephemeral: true });
+    } else if (commandName === 'summonfull') {
+        const invokingMember = interaction.member;
+        const selectedChannel = interaction.options.getChannel('channel');
 
-		if (selectedChannel && selectedChannel.isVoiceBased()) {
-			voiceChannel = selectedChannel;
-		} else if (invokingMember.voice.channel) {
-			voiceChannel = invokingMember.voice.channel;
-		} else {
-			return interaction.reply({ content: 'I cannot find a voice channel for you. Make sure you are in one.' });
-		}
+        let voiceChannel;
 
-		playerAudio(voiceChannel, true)
-		await interaction.deferReply({ ephemeral: true});
-	}
+        if (selectedChannel && selectedChannel.isVoiceBased()) {
+            voiceChannel = selectedChannel;
+        } else if (invokingMember.voice.channel) {
+            voiceChannel = invokingMember.voice.channel;
+        } else {
+            return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.` });
+        }
+
+        playerAudio(voiceChannel, true);
+        await interaction.deferReply({ ephemeral: true });
+    }
 });
+
 
 
 client.on('voiceStateUpdate', handleVoiceStateUpdate);
