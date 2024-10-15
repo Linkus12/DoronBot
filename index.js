@@ -11,8 +11,8 @@ const { File } = require('buffer');
 
 const { TOKEN, CLIENT_ID } = process.env;
 
-console.log(`TOKEN: ${TOKEN}`);
-console.log(`CLIENT_ID: ${CLIENT_ID}`);
+console.log(`ZE TOKEN!! TOKEN: ${TOKEN}`);
+console.log(`ZE CLIENT!! CLIENT_ID: ${CLIENT_ID}`);
 
 const audioDirectory = "./Audio_Files" //The MP3 audio directory
 
