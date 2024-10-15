@@ -16,5 +16,9 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 3000
 
+# Define environment variables
+ENV TOKEN= $DISCORD_TOKEN
+ENV CLIENT_ID= $DISCORD_CLIENT
+
 # Command to run the application
 CMD ["node", "index.js"]
