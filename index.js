@@ -214,14 +214,19 @@ client.on('interactionCreate', async interaction => {
 		const invokingMember = interaction.member;
 
 		if (!invokingMember.voice.channel) {
-			return interaction.reply({ content: 'You must be in a voice channel to summon me.' });
+			return interaction.reply({ content: 'You must be in a voice channel to summon me.'});
 		}
 
 		const voiceChannel = invokingMember.voice.channel;
-		playerAudio(voiceChannel);
 
+		// Defer the reply silently (ephemeral means only the user who invoked will see it, but we won't follow up)
+		await interaction.deferReply({ ephemeral: true });
+
+		// Play the audio after joining the voice channel
+		playerAudio(voiceChannel);
 	}
 });
+
 
 client.on('voiceStateUpdate', handleVoiceStateUpdate);
 
