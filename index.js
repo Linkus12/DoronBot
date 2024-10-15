@@ -33,16 +33,16 @@ const commands = [
 		.addChannelOption(option => 
 			option.setName('channel')
 			    .setDescription('Choose the channel to summon me in (optional)')
-				.setRequired(false))
-				.addChannelType(ChannelType.GuildVoice),
+				.setRequired(false)
+				.addChannelType(ChannelType.GuildVoice)),
 	new SlashCommandBuilder()
 	    .setName('summonfull')
 		.setDescription("Summon me for Doron le full ;))")
 		.addChannelOption(option => 
 			option.setName('channel')
 			    .setDescription('Choose the channel to summon me in (optional)')
-				.setRequired(false))
-				.addChannelType(ChannelType.GuildVoice),
+				.setRequired(false)
+				.addChannelType(ChannelType.GuildVoice)),
 ].map(command => command.toJSON());
 
 const GUILD_ID = "1022540810589319168";
