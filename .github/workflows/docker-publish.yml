@@ -96,6 +96,14 @@ jobs:
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+      - name: Set Up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '22'
+          
+      - name: Install Dependencies
+        run: npm install
+
       - name: Doron-Bot
         env:
           TOKEN: ${{ secrets.DISCORD_TOKEN }}
