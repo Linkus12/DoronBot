@@ -20,7 +20,7 @@ const client = new Client({
 		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.GuildMembers,
 	]
-});https://github.com/Linkus12/DoronBot/settings
+});
 
 const DoronID = '435868622825586688'
 
