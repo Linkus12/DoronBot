@@ -189,12 +189,14 @@ function playerAudio(channel, full = false) {
 function followDoron(channel) {
     const connection = getVoiceConnection(channel.guild.id);
 
+    // Check if there's an existing connection
     if (connection) {
-        if (connection.channel.id === channel.id) {
+        // Check if the bot is already in the desired channel
+        if (connection.channel && connection.channel.id === channel.id) {
             console.log(`Already in ${channel.name}, skipping...`);
             return;
         } else {
-            console.log(`Switching from ${connection.channel.name} to ${channel.name}`);
+            console.log(`Switching from ${connection.channel ? connection.channel.name : 'unknown'} to ${channel.name}`);
             connection.destroy();
         }
     }
@@ -206,6 +208,7 @@ function followDoron(channel) {
         adapterCreator: channel.guild.voiceAdapterCreator,
     });
 }
+
 
 
 
