@@ -303,11 +303,6 @@ function timeOut(newState) {
 async function handleVoiceStateUpdate(oldState, newState) {
     // Check if the Doron user joined, switched, or left a voice channel
 
-    if (isFollowingDoron)
-    {
-        return;
-    }
-
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
@@ -385,6 +380,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 });
             }, TimeoutDuration);
         } else {
+            if (isFollowingDoron)
+                {
+                    return;
+                }            
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
             audioPlayer = null;
