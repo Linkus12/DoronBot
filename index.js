@@ -13,6 +13,8 @@ const { TOKEN } = process.env;
 
 let CLIENT_ID;
 
+const TimeoutDuration = 500
+
 const audioDirectory = "./Audio_Files" //The MP3 audio directory
 
 let latestAudioFile = null;
@@ -118,11 +120,6 @@ let audioResource;
 let isFollowingDoron = false;
 
 function playerAudio(channel, full = false) {
-    // Prevent audio spam but allow following Doron
-    if (Debounce && !isFollowingDoron) {
-        console.log('Debounce is active, skipping audio playback.');
-        return;
-    }
 
     // Set debounce for audio playback
     if (!Debounce) {
@@ -209,7 +206,7 @@ function followDoron(channel) {
 function timeOut(newState) {
 	setTimeout(() => {
 		playerAudio(newState.channel, false)
-	}, 500);
+	}, TimeoutDuration);
 };
 
 // async function handleVoiceStateUpdate(oldState, newState) {
@@ -368,7 +365,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                         type: ActivityType.Custom,
                     }]
                 });
-            }, 500);
+            }, TimeoutDuration);
         } else {
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
@@ -383,7 +380,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         }
         
         // Reset debounce after a delay to allow future actions
-        setTimeout(() => debounce = false, debounceDuration); 
+        setTimeout(() => debounce = false, TimeoutDuration); 
     }
 }
 
@@ -418,7 +415,7 @@ client.on('interactionCreate', async interaction => {
 	const { commandName } = interaction;
 
 	if (Debounce) {
-		return interaction.reply({ content: `Yo nigga I'm currently thirsting for Doron nigga, wait yo turn.` });
+		return interaction.reply({ content: `Yo nigga I'm currently thirsting for Doron nigga, wait yo turn.`, ephemeral: true });
 	}
 
 	if (commandName === 'summon') {
@@ -432,7 +429,7 @@ client.on('interactionCreate', async interaction => {
 		} else if (invokingMember.voice.channel) {
 			voiceChannel = invokingMember.voice.channel;
 		} else {
-			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.` });
+			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
 		}
 
 		playerAudio(voiceChannel, false);
@@ -448,7 +445,7 @@ client.on('interactionCreate', async interaction => {
 		} else if (invokingMember.voice.channel) {
 			voiceChannel = invokingMember.voice.channel;
 		} else {
-			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.` });
+			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
 		}
 
 		playerAudio(voiceChannel, true);
