@@ -124,6 +124,9 @@ function playerAudio(channel, full = false) {
     // Set Debounce for audio playback
     if (!Debounce) {
         Debounce = true;
+    } else {
+        followDoron(channel)
+        return;
     }
 
     if (!channel) {
