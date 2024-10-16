@@ -339,14 +339,20 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     guildId: oldState.guild.id,
                     adapterCreator: oldState.guild.voiceAdapterCreator,
                 });
-
-                const subscription = newConnection.subscribe(audioPlayer);
-                if (subscription) {
-                    console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+        
+                if (audioPlayer) {
+                    const subscription = newConnection.subscribe(audioPlayer);
+                    if (subscription) {
+                        console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+                    } else {
+                        console.log('Subscription failed');
+                    }
                 } else {
-                    console.log('Subscription failed');
+                    console.log('Audio player is null, cannot resubscribe.');
+                    // Optionally destroy the connection here if needed
+                    newConnection.destroy();
                 }
-
+        
                 client.user.setPresence({
                     status: 'online',
                     activities: [{
@@ -367,6 +373,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 }]
             });
         }
+        
     }
 }
 
