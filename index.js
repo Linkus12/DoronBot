@@ -187,47 +187,26 @@ function playerAudio(channel, full = false) {
 }
 
 function followDoron(channel) {
-    console.log(`Doron joined ${channel.name}`);
-
     const connection = getVoiceConnection(channel.guild.id);
 
-    // Check if already connected to the new channel
-    if (connection && connection.joinInfo && connection.joinInfo.channelId === channel.id) {
-        console.log('Already in the correct channel.');
-        return; // No need to switch
-    }
-
-    // If there's an existing connection, prepare to transition
     if (connection) {
-        console.log(`Switching from ${connection.joinInfo.channel.name} to ${channel.name}`);
-        // You might want to pause the audio or prepare for transition
-        // Optionally handle audio player state here
+        if (connection.channel.id === channel.id) {
+            console.log(`Already in ${channel.name}, skipping...`);
+            return;
+        } else {
+            console.log(`Switching from ${connection.channel.name} to ${channel.name}`);
+            connection.destroy();
+        }
     }
 
-    // Now join the new voice channel
+    // Join the new voice channel
     joinVoiceChannel({
         channelId: channel.id,
         guildId: channel.guild.id,
         adapterCreator: channel.guild.voiceAdapterCreator,
-    }).then(newConnection => {
-        console.log(`Joined ${channel.name}`);
-        
-        // Subscribe to the audio player if needed
-        if (audioPlayer) {
-            const subscription = newConnection.subscribe(audioPlayer);
-            if (subscription) {
-                console.log(`Successfully subscribed to audio player in ${channel.name}`);
-            }
-        }
-
-        // After joining, check if we need to destroy the old connection
-        if (connection) {
-            connection.destroy(); // Only destroy if we successfully joined the new channel
-        }
-    }).catch(err => {
-        console.error('Failed to join the channel:', err);
     });
 }
+
 
 
 
