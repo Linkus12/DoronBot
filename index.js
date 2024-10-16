@@ -186,42 +186,50 @@ function playerAudio(channel, full = false) {
     }
 }
 
+// Function to follow Doron and join the new channel seamlessly
 function followDoron(channel) {
-    if (isFollowingDoron) {
-        console.log('Already following Doron.');
-        return;
-    }
-
-    console.log(`Following Doron to channel: ${channel.name}`);
-
+    console.log(`Doron joined ${channel.name}`);
+    
     const connection = getVoiceConnection(channel.guild.id);
 
-    // Create the new connection first
-    const newConnection = joinVoiceChannel({
+    // Check if already connected to the new channel
+    if (connection && connection.joinInfo.channelId === channel.id) {
+        console.log('Already in the correct channel.');
+        return; // No need to switch
+    }
+
+    // If there's an existing connection, prepare to transition
+    if (connection) {
+        console.log(`Switching from ${connection.joinInfo.channel.name} to ${channel.name}`);
+        // You might want to pause the audio or prepare for transition
+        // Optionally handle audio player state here
+    }
+
+    // Now join the new voice channel
+    joinVoiceChannel({
         channelId: channel.id,
         guildId: channel.guild.id,
         adapterCreator: channel.guild.voiceAdapterCreator,
-    });
-
-    if (audioPlayer) {
-        // If there's an existing audio player, subscribe it to the new connection
-        const subscription = newConnection.subscribe(audioPlayer);
-        if (subscription) {
-            console.log(`Successfully subscribed to audio player in ${channel.name}`);
-        } else {
-            console.log('Subscription failed');
+    }).then(newConnection => {
+        console.log(`Joined ${channel.name}`);
+        
+        // Subscribe to the audio player if needed
+        if (audioPlayer) {
+            const subscription = newConnection.subscribe(audioPlayer);
+            if (subscription) {
+                console.log(`Successfully subscribed to audio player in ${channel.name}`);
+            }
         }
-    }
 
-    // Destroy the old connection after a short delay
-    if (connection) {
-        setTimeout(() => {
-            connection.destroy();
-        }, TimeoutDuration); // You may adjust this delay if needed
-    }
-
-    isFollowingDoron = true; // Set the flag to indicate the bot is now following Doron
+        // After joining, check if we need to destroy the old connection
+        if (connection) {
+            connection.destroy(); // Only destroy if we successfully joined the new channel
+        }
+    }).catch(err => {
+        console.error('Failed to join the channel:', err);
+    });
 }
+
 
 
 function timeOut(newState) {
