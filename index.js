@@ -186,14 +186,13 @@ function playerAudio(channel, full = false) {
     }
 }
 
-// Function to follow Doron and join the new channel seamlessly
 function followDoron(channel) {
     console.log(`Doron joined ${channel.name}`);
-    
+
     const connection = getVoiceConnection(channel.guild.id);
 
     // Check if already connected to the new channel
-    if (connection && connection.joinInfo.channelId === channel.id) {
+    if (connection && connection.joinInfo && connection.joinInfo.channelId === channel.id) {
         console.log('Already in the correct channel.');
         return; // No need to switch
     }
@@ -229,6 +228,7 @@ function followDoron(channel) {
         console.error('Failed to join the channel:', err);
     });
 }
+
 
 
 
