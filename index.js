@@ -195,16 +195,34 @@ function followDoron(channel) {
     console.log(`Following Doron to channel: ${channel.name}`);
 
     const connection = getVoiceConnection(channel.guild.id);
-    if (connection) {
-        connection.destroy();
-    }
 
-    joinVoiceChannel({
+    // Create the new connection first
+    const newConnection = joinVoiceChannel({
         channelId: channel.id,
         guildId: channel.guild.id,
         adapterCreator: channel.guild.voiceAdapterCreator,
     });
+
+    if (audioPlayer) {
+        // If there's an existing audio player, subscribe it to the new connection
+        const subscription = newConnection.subscribe(audioPlayer);
+        if (subscription) {
+            console.log(`Successfully subscribed to audio player in ${channel.name}`);
+        } else {
+            console.log('Subscription failed');
+        }
+    }
+
+    // Destroy the old connection after a short delay
+    if (connection) {
+        setTimeout(() => {
+            connection.destroy();
+        }, TimeoutDuration); // You may adjust this delay if needed
+    }
+
+    isFollowingDoron = true; // Set the flag to indicate the bot is now following Doron
 }
+
 
 function timeOut(newState) {
 	setTimeout(() => {
