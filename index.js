@@ -433,9 +433,6 @@ async function handleVoiceStateUpdate(oldState, newState) {
     }
 }
 
-
-a
-
 function resetPresence() {
     client.user.setPresence({
         status: 'idle',
