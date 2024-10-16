@@ -300,7 +300,12 @@ function timeOut(newState) {
 //     }
 // }
 
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function handleVoiceStateUpdate(oldState, newState) {
+    await delay(1000)
     // Check if the Doron user joined, switched, or left a voice channel
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
@@ -429,7 +434,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
 }
 
 
-
+a
 
 function resetPresence() {
     client.user.setPresence({
