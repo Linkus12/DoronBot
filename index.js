@@ -124,6 +124,7 @@ function playerAudio(channel, full = false) {
         followDoron(channel); // Call follow logic even if debounce is active
         return;
     }
+    
 
     Debounce = true; // Set debounce here when audio starts playing
 
@@ -183,21 +184,16 @@ function playerAudio(channel, full = false) {
         audioPlayer.on(AudioPlayerStatus.Idle, () => {
             const currentConnection = getVoiceConnection(channel.guild.id);
             if (currentConnection) {
-                currentConnection.destroy(); // Destroy the connection
+                currentConnection.destroy();
                 client.user.setPresence({
                     status: 'idle',
-                    activities: [{
-                        name: 'For Doron...',
-                        type: ActivityType.Watching,
-                    }]
+                    activities: [{ name: 'For Doron...', type: ActivityType.Watching }]
                 });
-                Debounce = false; // Reset debounce after playback ends
+                Debounce = false; // Reset debounce here after playback ends
             }
-
-            // Reset the audio player and resource for future use
             audioPlayer = null;
-            audioResource = null;
         });
+        
     } else {
         // If the player is already active, switch channels or reconnect
         const connection = getVoiceConnection(channel.guild.id);
@@ -278,7 +274,6 @@ function timeOut(newState) {
 };
 
 async function handleVoiceStateUpdate(oldState, newState) {
-    // Check if the Doron user joined or left a channel
     if (newState.member.id === DoronID) {
         if (!oldState.channel && newState.channel) {
             // Doron joined a voice channel
@@ -293,10 +288,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
             audioPlayer = null;
             client.user.setPresence({
                 status: 'idle',
-                activities: [{
-                    name: 'For Doron...',
-                    type: ActivityType.Watching,
-                }]
+                activities: [{ name: 'For Doron...', type: ActivityType.Watching }]
             });
             Debounce = false;
         }
@@ -305,12 +297,9 @@ async function handleVoiceStateUpdate(oldState, newState) {
     // Check if the bot itself was disconnected from the voice channel
     if (oldState.member.id === client.user.id && !newState.channel) {
         console.log(`Bot was disconnected from ${oldState.channel.name}`);
-
-        // If the bot was disconnected, check if Doron was in the same channel
         const doronInOldChannel = oldState.channel?.members.has(DoronID);
-        
+
         if (doronInOldChannel) {
-            // If Doron was in the same channel, rejoin
             console.log('Rejoining because Doron was in the channel...');
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
@@ -332,14 +321,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
                 client.user.setPresence({
                     status: 'online',
-                    activities: [{
-                        name: 'Thirsting for Doron rn',
-                        type: ActivityType.Custom,
-                    }]
+                    activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom }]
                 });
             }, 500);
         } else {
-            // Otherwise, destroy the connection and stop audio playback
             console.log('Doron was not in the channel. Destroying connection...');
             const connection = getVoiceConnection(oldState.guild.id);
             if (connection) {
@@ -349,14 +334,12 @@ async function handleVoiceStateUpdate(oldState, newState) {
             audioPlayer = null;
             client.user.setPresence({
                 status: 'idle',
-                activities: [{
-                    name: 'Waiting for Doron...',
-                    type: ActivityType.Watching,
-                }]
+                activities: [{ name: 'Waiting for Doron...', type: ActivityType.Watching }]
             });
         }
     }
 }
+
 
 
 
