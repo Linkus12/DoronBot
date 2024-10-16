@@ -332,7 +332,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
         
             // Bypass debounce check for Doron
-            if (debounce && !isDoron) {
+            if (debounce) {
                 console.log('Debounce is active, skipping audio playback.');
                 return;
             }
