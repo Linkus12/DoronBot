@@ -333,6 +333,15 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
         if (doronInOldChannel && audioStillPlaying) {
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
+        
+            // Bypass debounce check for Doron
+            if (debounce && !isDoron) {
+                console.log('Debounce is active, skipping audio playback.');
+                return;
+            }
+        
+            debounce = true; // Apply debounce for others, but allow Doron to rejoin.
+        
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
                     channelId: oldState.channel.id,
@@ -349,8 +358,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     }
                 } else {
                     console.log('Audio player is null, cannot resubscribe.');
-                    // Optionally destroy the connection here if needed
-                    newConnection.destroy();
+                    newConnection.destroy(); // Destroy connection if resubscription fails
                 }
         
                 client.user.setPresence({
@@ -374,6 +382,8 @@ async function handleVoiceStateUpdate(oldState, newState) {
             });
         }
         
+        // Reset debounce after a delay to allow future actions
+        setTimeout(() => debounce = false, debounceDuration); 
     }
 }
 
