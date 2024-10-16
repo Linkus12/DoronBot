@@ -188,7 +188,7 @@ function playerAudio(channel, full = false) {
 
 function followDoron(channel) {
     const connection = getVoiceConnection(channel.guild.id);
-
+    isFollowingDoron = true;
     // Check if there's an existing connection
     if (connection) {
         // Check if the bot is already in the desired channel
@@ -207,6 +207,7 @@ function followDoron(channel) {
         guildId: channel.guild.id,
         adapterCreator: channel.guild.voiceAdapterCreator,
     });
+    isFollowingDoron = false;
 }
 
 
@@ -301,6 +302,12 @@ function timeOut(newState) {
 
 async function handleVoiceStateUpdate(oldState, newState) {
     // Check if the Doron user joined, switched, or left a voice channel
+
+    if (isFollowingDoron)
+    {
+        return;
+    }
+
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
