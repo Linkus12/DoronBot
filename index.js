@@ -121,7 +121,7 @@ let isFollowingDoron = false;
 
 function playerAudio(channel, full = false) {
 
-    // Set debounce for audio playback
+    // Set Debounce for audio playback
     if (!Debounce) {
         Debounce = true;
     }
@@ -331,13 +331,13 @@ async function handleVoiceStateUpdate(oldState, newState) {
         if (doronInOldChannel && audioStillPlaying) {
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
         
-            // Bypass debounce check for Doron
-            if (debounce) {
+            // Bypass Debounce check for Doron
+            if (Debounce) {
                 console.log('Debounce is active, skipping audio playback.');
                 return;
             }
         
-            debounce = true; // Apply debounce for others, but allow Doron to rejoin.
+            Debounce = true; // Apply Debounce for others, but allow Doron to rejoin.
         
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
@@ -379,8 +379,8 @@ async function handleVoiceStateUpdate(oldState, newState) {
             });
         }
         
-        // Reset debounce after a delay to allow future actions
-        setTimeout(() => debounce = false, TimeoutDuration); 
+        // Reset Debounce after a delay to allow future actions
+        setTimeout(() => Debounce = false, TimeoutDuration); 
     }
 }
 
