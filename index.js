@@ -118,7 +118,7 @@ let audioResource;
 let isFollowingDoron = false;
 
 function playerAudio(channel, full = false) {
-    // This part remains, to prevent multiple playbacks from commands
+    // Prevent audio spam but allow following Doron
     if (Debounce && !isFollowingDoron) {
         console.log('Debounce is active, skipping audio playback.');
         return;
@@ -134,6 +134,7 @@ function playerAudio(channel, full = false) {
         return;
     }
 
+    // Set presence to indicate the bot is active
     client.user.setPresence({
         status: 'online',
         activities: [{
@@ -167,54 +168,35 @@ function playerAudio(channel, full = false) {
 
         connection.subscribe(audioPlayer);
 
-        // Handle disconnections explicitly
-        connection.on('disconnect', () => {
-            console.log('Bot was disconnected from the channel');
-            audioPlayer = null; 
-            Debounce = false;  
-            resetPresence();
-        });
-
         // Handle when audio finishes
         audioPlayer.on(AudioPlayerStatus.Idle, () => {
+            console.log('Audio finished. Destroying connection and resetting presence.');
             const currentConnection = getVoiceConnection(channel.guild.id);
             if (currentConnection) {
                 currentConnection.destroy();
                 resetPresence();
-                Debounce = false; 
+                Debounce = false;
             }
 
             audioPlayer = null;
-            audioResource = null;
         });
     } else {
-        const connection = getVoiceConnection(channel.guild.id);
-        if (!connection) {
-            const newConnection = joinVoiceChannel({
-                channelId: channel.id,
-                guildId: channel.guild.id,
-                adapterCreator: channel.guild.voiceAdapterCreator,
-            });
-            newConnection.subscribe(audioPlayer);
-        }
+        // If audio player is already active, just follow Doron
+        followDoron(channel);
     }
-
-    // Follow Doron after playing audio
-    followDoron(channel);
 }
 
 function followDoron(channel) {
     if (isFollowingDoron) {
-        console.log(`Already following Doron.`);
+        console.log('Already following Doron.');
         return;
     }
 
-    isFollowingDoron = true;
     console.log(`Following Doron to channel: ${channel.name}`);
 
     const connection = getVoiceConnection(channel.guild.id);
     if (connection) {
-        connection.disconnect();
+        connection.destroy();
     }
 
     joinVoiceChannel({
@@ -232,24 +214,35 @@ function timeOut(newState) {
 
 async function handleVoiceStateUpdate(oldState, newState) {
     if (newState.member.id === DoronID) {
+        // Doron joined a voice channel
         if (!oldState.channel && newState.channel) {
+            console.log('Doron joined a channel');
             timeOut(newState);
-        } else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
-            // Doron switched channels
+        }
+        // Doron switched channels
+        else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
             console.log('Doron switched channels');
             timeOut(newState);
-        } else if (!newState.channel) {
+        }
+        // Doron left the voice channel
+        else if (!newState.channel) {
+            console.log('Doron left the channel.');
             const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
+            if (connection) {
+                connection.destroy();
+                console.log('Disconnected from voice channel.');
+            }
             audioPlayer = null;
             resetPresence();
             Debounce = false;
         }
     }
 
+    // Handle bot disconnection from a voice channel
     if (oldState.member.id === client.user.id && !newState.channel) {
         console.log(`Bot was disconnected from ${oldState.channel.name}`);
 
+        // Check if Doron is still in the channel when the bot disconnects
         const doronInOldChannel = oldState.channel?.members.has(DoronID);
         
         if (doronInOldChannel) {
