@@ -118,15 +118,16 @@ let audioResource;
 let isFollowingDoron = false;
 
 function playerAudio(channel, full = false) {
-    // Check if Debounce is true to prevent multiple audio playbacks
-    if (Debounce) {
-        console.log('Debounce is active, skipping audio playback or reconnection.');
-        followDoron(channel); // Call follow logic even if debounce is active
+    // This part remains, to prevent multiple playbacks from commands
+    if (Debounce && !isFollowingDoron) {
+        console.log('Debounce is active, skipping audio playback.');
         return;
     }
-    
 
-    Debounce = true; // Set debounce here when audio starts playing
+    // Set debounce for audio playback
+    if (!Debounce) {
+        Debounce = true;
+    }
 
     if (!channel) {
         console.error('Channel is undefined, unable to join or play audio');
@@ -143,12 +144,12 @@ function playerAudio(channel, full = false) {
 
     if (!audioPlayer) {
         audioPlayer = createAudioPlayer();
-        let audioResource;
 
+        let audioResource;
         if (full) {
             audioResource = createAudioResource('./Audio_Files/DORON.mp3');
         } else {
-            audioResource = createAudioResource(getRandomAudioFile()); // Get a random audio file
+            audioResource = createAudioResource(getRandomAudioFile());
         }
 
         if (!audioResource) {
@@ -169,33 +170,24 @@ function playerAudio(channel, full = false) {
         // Handle disconnections explicitly
         connection.on('disconnect', () => {
             console.log('Bot was disconnected from the channel');
-            audioPlayer = null; // Reset the audio player
-            Debounce = false;   // Reset debounce
-            client.user.setPresence({
-                status: 'idle',
-                activities: [{
-                    name: 'For Doron...',
-                    type: ActivityType.Watching,
-                }]
-            });
+            audioPlayer = null; 
+            Debounce = false;  
+            resetPresence();
         });
 
-        // Listen for the audio player becoming idle and disconnect after audio is finished
+        // Handle when audio finishes
         audioPlayer.on(AudioPlayerStatus.Idle, () => {
             const currentConnection = getVoiceConnection(channel.guild.id);
             if (currentConnection) {
                 currentConnection.destroy();
-                client.user.setPresence({
-                    status: 'idle',
-                    activities: [{ name: 'For Doron...', type: ActivityType.Watching }]
-                });
-                Debounce = false; // Reset debounce here after playback ends
+                resetPresence();
+                Debounce = false; 
             }
+
             audioPlayer = null;
+            audioResource = null;
         });
-        
     } else {
-        // If the player is already active, switch channels or reconnect
         const connection = getVoiceConnection(channel.guild.id);
         if (!connection) {
             const newConnection = joinVoiceChannel({
@@ -207,65 +199,30 @@ function playerAudio(channel, full = false) {
         }
     }
 
-    // Call follow logic after setting up audio playback
+    // Follow Doron after playing audio
     followDoron(channel);
 }
 
-async function followDoron(channel) {
-    if (!isFollowingDoron) {
-        isFollowingDoron = true; // Set following flag
-        console.log(`Following Doron to channel: ${channel.name}`);
-
-        // Logic to follow Doron
-        const connection = getVoiceConnection(channel.guild.id);
-        if (connection) {
-            connection.disconnect(); // Disconnect current connection if necessary
-        }
-
-        // Join the new channel where Doron is
-        joinVoiceChannel({
-            channelId: channel.id,
-            guildId: channel.guild.id,
-            adapterCreator: channel.guild.voiceAdapterCreator,
-        });
-        
-        // Optionally reset following flag after some condition, if necessary
-        // isFollowingDoron = false; // Uncomment this if you want to allow following only once
+function followDoron(channel) {
+    if (isFollowingDoron) {
+        console.log(`Already following Doron.`);
+        return;
     }
+
+    isFollowingDoron = true;
+    console.log(`Following Doron to channel: ${channel.name}`);
+
+    const connection = getVoiceConnection(channel.guild.id);
+    if (connection) {
+        connection.disconnect();
+    }
+
+    joinVoiceChannel({
+        channelId: channel.id,
+        guildId: channel.guild.id,
+        adapterCreator: channel.guild.voiceAdapterCreator,
+    });
 }
-
-
-
-
-
-
-// function joinAndPlaySound(channel) {
-// 	try {
-
-// 		const connection = joinVoiceChannel({
-// 			channelId: channel.id,
-// 			guildId: channel.guild.id,
-// 			adapterCreator: channel.guild.voiceAdapterCreator,
-
-// 		});
-
-// 		playerAudio(channel);
-// 	// 	const player = createAudioPlayer();
-// 	// 	const resource = createAudioResource('DORON.mp3');
-
-// 	// 	player.play(resource);
-// 	// 	connection.subscribe(player);
-
-// 	// 	player.on(AudioPlayerStatus.Idle, () => {
-
-// 	// 		connection.destroy();
-
-// 	// 	});
-
-// 	} catch (error) {
-// 		console.error('Error joining and playing sound:', error);
-// 	}
-// }
 
 function timeOut(newState) {
 	setTimeout(() => {
@@ -276,29 +233,25 @@ function timeOut(newState) {
 async function handleVoiceStateUpdate(oldState, newState) {
     if (newState.member.id === DoronID) {
         if (!oldState.channel && newState.channel) {
-            // Doron joined a voice channel
             timeOut(newState);
         } else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
             // Doron switched channels
+            console.log('Doron switched channels');
             timeOut(newState);
         } else if (!newState.channel) {
-            // Doron left the channel
             const connection = getVoiceConnection(oldState.guild.id);
             if (connection) connection.destroy();
             audioPlayer = null;
-            client.user.setPresence({
-                status: 'idle',
-                activities: [{ name: 'For Doron...', type: ActivityType.Watching }]
-            });
+            resetPresence();
             Debounce = false;
         }
     }
 
-    // Check if the bot itself was disconnected from the voice channel
     if (oldState.member.id === client.user.id && !newState.channel) {
         console.log(`Bot was disconnected from ${oldState.channel.name}`);
-        const doronInOldChannel = oldState.channel?.members.has(DoronID);
 
+        const doronInOldChannel = oldState.channel?.members.has(DoronID);
+        
         if (doronInOldChannel) {
             console.log('Rejoining because Doron was in the channel...');
             setTimeout(() => {
@@ -321,7 +274,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
                 client.user.setPresence({
                     status: 'online',
-                    activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom }]
+                    activities: [{
+                        name: 'Thirsting for Doron rn',
+                        type: ActivityType.Custom,
+                    }]
                 });
             }, 500);
         } else {
@@ -332,14 +288,20 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 console.log('Connection destroyed.');
             }
             audioPlayer = null;
-            client.user.setPresence({
-                status: 'idle',
-                activities: [{ name: 'Waiting for Doron...', type: ActivityType.Watching }]
-            });
+            resetPresence();
         }
     }
 }
 
+function resetPresence() {
+    client.user.setPresence({
+        status: 'idle',
+        activities: [{
+            name: 'For Doron...',
+            type: ActivityType.Watching,
+        }]
+    });
+}
 
 
 
