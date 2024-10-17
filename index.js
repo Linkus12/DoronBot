@@ -207,7 +207,9 @@ function followDoron(channel) {
         guildId: channel.guild.id,
         adapterCreator: channel.guild.voiceAdapterCreator,
     });
-    isFollowingDoron = false;
+    setTimeout(() => {
+        isFollowingDoron = false;
+    }, TimeoutDuration);
 }
 
 
@@ -415,7 +417,9 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     }]
                 });
             }, TimeoutDuration);
-        } else {         
+        } else {
+            console.log(`Is following ${isFollowingDoron}`)
+            if (isFollowingDoron === true) { return; }
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
             audioPlayer = null;
