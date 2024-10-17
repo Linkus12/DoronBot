@@ -377,7 +377,11 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
     // Handle bot disconnection logic
     if (oldState.member.id === client.user.id && !newState.channel) {
-        console.log(`Bot was disconnected from ${oldState.channel.name}`);
+        if (oldState.channel) {
+            console.log(`Bot was disconnected from ${oldState.channel.name}`);
+        } else {
+            console.log('Bot was disconnected from a channel.');
+        }
 
         const connection = getVoiceConnection(oldState.guild.id);
         const doronInOldChannel = oldState.channel?.members.has(DoronID);
