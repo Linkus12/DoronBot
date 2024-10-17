@@ -307,10 +307,10 @@ function delay(ms) {
 }
 
 async function handleVoiceStateUpdate(oldState, newState) {
-    await delay(1000)
-    // Check if the Doron user joined, switched, or left a voice channel
+    await delay(1000);  // Small delay to avoid premature disconnections
     let Debounce2 = false;
-    // Check if the Doron user joined, switched, or left a voice channel
+
+    // Check if Doron joined, switched, or left a voice channel
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
@@ -318,14 +318,18 @@ async function handleVoiceStateUpdate(oldState, newState) {
         if (!oldChannel && newChannel) {
             // Doron joined a new voice channel
             console.log(`Doron joined ${newChannel.name}`);
-            timeOut(newState); // Possibly a custom function you are calling here
+            timeOut(newState);
         } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
             // Doron switched voice channels
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
 
-            // Destroy the old connection
-            const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
+            // Delay destroying old connection to ensure smooth switch
+            const oldConnection = getVoiceConnection(oldState.guild.id);
+            if (oldConnection) {
+                setTimeout(() => {
+                    oldConnection.destroy();
+                }, 1000);  // Slight delay before destroying the old connection
+            }
 
             // Join the new voice channel
             const newConnection = joinVoiceChannel({
@@ -334,20 +338,19 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 adapterCreator: oldState.guild.voiceAdapterCreator,
             });
 
-            // Resubscribe to the audio player
             if (audioPlayer) {
                 const subscription = newConnection.subscribe(audioPlayer);
                 if (subscription) {
                     console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
                 } else {
                     console.log('Subscription failed');
+                    newConnection.destroy();  // Destroy if subscription fails
                 }
             } else {
                 console.log('Audio player is null, cannot resubscribe.');
-                newConnection.destroy(); // Destroy connection if resubscription fails
+                newConnection.destroy();
             }
 
-            // Update bot's presence
             client.user.setPresence({
                 status: 'online',
                 activities: [{
@@ -372,7 +375,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         }
     }
 
-    // Handle bot being disconnected logic
+    // Handle bot disconnection logic
     if (oldState.member.id === client.user.id && !newState.channel) {
         console.log(`Bot was disconnected from ${oldState.channel.name}`);
 
@@ -381,7 +384,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         const audioStillPlaying = audioPlayer?.state?.status !== AudioPlayerStatus.Idle;
 
         if (doronInOldChannel && audioStillPlaying) {
-            // Rejoin if Doron disconnected the bot and audio is playing
+            // Rejoin if Doron disconnected the bot and audio is still playing
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
 
             if (Debounce2) {
@@ -389,7 +392,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 return;
             }
 
-            Debounce2 = true; // Apply Debounce for others, but allow Doron to rejoin.
+            Debounce2 = true;
 
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
@@ -407,7 +410,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     }
                 } else {
                     console.log('Audio player is null, cannot resubscribe.');
-                    newConnection.destroy(); // Destroy connection if resubscription fails
+                    newConnection.destroy();
                 }
 
                 client.user.setPresence({
@@ -432,10 +435,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
             });
         }
 
-        // Reset Debounce after a delay to allow future actions
         setTimeout(() => Debounce2 = false, TimeoutDuration);
     }
 }
+
 
 function resetPresence() {
     client.user.setPresence({
