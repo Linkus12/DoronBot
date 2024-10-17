@@ -306,9 +306,12 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let isSwitchingChannels = false
 async function handleVoiceStateUpdate(oldState, newState) {
     await delay(1000);  // Small delay to avoid premature disconnections
-    let Debounce2 = false;
+
+    if (oldState.id !== client.user.id) return;
+    if (isSwitchingChannels) return;
 
     // Check if Doron joined, switched, or left a voice channel
     if (newState.member.id === DoronID) {
@@ -322,12 +325,14 @@ async function handleVoiceStateUpdate(oldState, newState) {
         } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
             // Doron switched voice channels
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
+            isSwitchingChannels = true;  // Set the flag to prevent further updates
 
             // Delay destroying old connection to ensure smooth switch
             const oldConnection = getVoiceConnection(oldState.guild.id);
             if (oldConnection) {
                 setTimeout(() => {
                     oldConnection.destroy();
+                    console.log(`Destroyed old connection to ${oldChannel.name}`);
                 }, 1000);  // Slight delay before destroying the old connection
             }
 
@@ -358,6 +363,8 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     type: ActivityType.Custom,
                 }]
             });
+
+            isSwitchingChannels = false;  // Reset the flag after handling the switch
         } else if (!newChannel) {
             // Doron left the voice channel entirely
             console.log(`Doron left the voice channel`);
@@ -371,7 +378,6 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     type: ActivityType.Watching,
                 }]
             });
-            Debounce2 = false;
         }
     }
 
@@ -390,7 +396,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         if (doronInOldChannel && audioStillPlaying) {
             // Rejoin if Doron disconnected the bot and audio is still playing
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
-
+            
             if (Debounce2) {
                 console.log('Debounce is active, skipping audio playback.');
                 return;
@@ -442,6 +448,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         setTimeout(() => Debounce2 = false, TimeoutDuration);
     }
 }
+
 
 
 function resetPresence() {
