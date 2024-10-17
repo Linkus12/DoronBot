@@ -22,11 +22,11 @@ let latestAudioFile = null;
 let Debounce = false;
 
 const client = new Client({
-	intents: [
-		GatewayIntentBits.Guilds,
-		GatewayIntentBits.GuildVoiceStates,
-		GatewayIntentBits.GuildMembers,
-	]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMembers,
+    ]
 });
 
 // const DoronID = '435868622825586688'
@@ -35,83 +35,83 @@ const DoronID = '317621199880585216'
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path || require('ffmpeg-static');
 
 const commands = [
-	new SlashCommandBuilder()
-		.setName('summon')
-		.setDescription('Summon me for Doron ;))')
-		.addChannelOption(option =>
-			option.setName('channel')
-				.setDescription('Choose the channel to summon me in (optional)')
-				.setRequired(false)
-				.addChannelTypes(ChannelType.GuildVoice)),
-	new SlashCommandBuilder()
-		.setName('summonfull')
-		.setDescription("Summon me for Doron le full ;))")
-		.addChannelOption(option =>
-			option.setName('channel')
-				.setDescription('Choose the channel to summon me in (optional)')
-				.setRequired(false)
-				.addChannelTypes(ChannelType.GuildVoice)),
+    new SlashCommandBuilder()
+        .setName('summon')
+        .setDescription('Summon me for Doron ;))')
+        .addChannelOption(option =>
+            option.setName('channel')
+                .setDescription('Choose the channel to summon me in (optional)')
+                .setRequired(false)
+                .addChannelTypes(ChannelType.GuildVoice)),
+    new SlashCommandBuilder()
+        .setName('summonfull')
+        .setDescription("Summon me for Doron le full ;))")
+        .addChannelOption(option =>
+            option.setName('channel')
+                .setDescription('Choose the channel to summon me in (optional)')
+                .setRequired(false)
+                .addChannelTypes(ChannelType.GuildVoice)),
 ].map(command => command.toJSON());
 
 const GUILD_ID = "1022540810589319168";
 
 const registerSpecificCommand = async (commands) => {
-	const rest = new REST({ version: '9' }).setToken(TOKEN);
-	try {
-		await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-	} catch (err) {
-		console.error(err);
-	}
+    const rest = new REST({ version: '9' }).setToken(TOKEN);
+    try {
+        await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
+    } catch (err) {
+        console.error(err);
+    }
 };
 
 const registerCommand = async (commands) => {
-	const rest = new REST({ version: '9' }).setToken(TOKEN);
-	try {
-		await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-	} catch (err) {
-		console.error(err);
-	}
+    const rest = new REST({ version: '9' }).setToken(TOKEN);
+    try {
+        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    } catch (err) {
+        console.error(err);
+    }
 };
 
 client.once('ready', async () => {
 
-	client.user.setPresence({
-		status: 'idle',
-		activities: [{
-			name: 'For Doron...',
-			type: ActivityType.Watching,
-			//state: 'For The Hour...',
-		}]
-	});
+    client.user.setPresence({
+        status: 'idle',
+        activities: [{
+            name: 'For Doron...',
+            type: ActivityType.Watching,
+            //state: 'For The Hour...',
+        }]
+    });
 
-	CLIENT_ID = `${client.user.id}`;
+    CLIENT_ID = `${client.user.id}`;
 
-	await registerSpecificCommand(commands);
-	registerCommand(commands);
-	console.log('Doron is ready ;) ...');
+    await registerSpecificCommand(commands);
+    registerCommand(commands);
+    console.log('Doron is ready ;) ...');
 
 });
 
 function getRandomAudioFile() { // Gets a random audio file from the audio directory
-	const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3'));
-	// If only one file is present, return it
-	if (files.length === 1) {
-		return path.join(audioDirectory, files[0]);
-	}
+    const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3'));
+    // If only one file is present, return it
+    if (files.length === 1) {
+        return path.join(audioDirectory, files[0]);
+    }
 
-	let randomIndex;
-	let selectedFile;
+    let randomIndex;
+    let selectedFile;
 
-	// Keep picking a random file until it's different from the last one
-	do {
-		randomIndex = Math.floor(Math.random() * files.length);
-		selectedFile = path.join(audioDirectory, files[randomIndex]);
-	} while (selectedFile === latestAudioFile);
+    // Keep picking a random file until it's different from the last one
+    do {
+        randomIndex = Math.floor(Math.random() * files.length);
+        selectedFile = path.join(audioDirectory, files[randomIndex]);
+    } while (selectedFile === latestAudioFile);
 
-	// Update the latest audio file to the new one
-	latestAudioFile = selectedFile;
+    // Update the latest audio file to the new one
+    latestAudioFile = selectedFile;
 
-	return selectedFile;
+    return selectedFile;
 }
 
 let audioPlayer;
@@ -218,9 +218,9 @@ function followDoron(channel) {
 
 
 function timeOut(newState) {
-	setTimeout(() => {
-		playerAudio(newState.channel, false)
-	}, TimeoutDuration);
+    setTimeout(() => {
+        playerAudio(newState.channel, false)
+    }, TimeoutDuration);
 };
 
 // async function handleVoiceStateUpdate(oldState, newState) {
@@ -309,6 +309,8 @@ function delay(ms) {
 async function handleVoiceStateUpdate(oldState, newState) {
     await delay(1000)
     // Check if the Doron user joined, switched, or left a voice channel
+    let Debounce2 = false;
+    // Check if the Doron user joined, switched, or left a voice channel
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
@@ -316,16 +318,14 @@ async function handleVoiceStateUpdate(oldState, newState) {
         if (!oldChannel && newChannel) {
             // Doron joined a new voice channel
             console.log(`Doron joined ${newChannel.name}`);
-            timeOut(newState);
+            timeOut(newState); // Possibly a custom function you are calling here
         } else if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
             // Doron switched voice channels
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
 
-            // Move the bot to the new channel
+            // Destroy the old connection
             const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) {
-                connection.destroy(); // Destroy the old connection
-            }
+            if (connection) connection.destroy();
 
             // Join the new voice channel
             const newConnection = joinVoiceChannel({
@@ -347,6 +347,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 newConnection.destroy(); // Destroy connection if resubscription fails
             }
 
+            // Update bot's presence
             client.user.setPresence({
                 status: 'online',
                 activities: [{
@@ -367,7 +368,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     type: ActivityType.Watching,
                 }]
             });
-            Debounce = false;
+            Debounce2 = false;
         }
     }
 
@@ -380,15 +381,15 @@ async function handleVoiceStateUpdate(oldState, newState) {
         const audioStillPlaying = audioPlayer?.state?.status !== AudioPlayerStatus.Idle;
 
         if (doronInOldChannel && audioStillPlaying) {
+            // Rejoin if Doron disconnected the bot and audio is playing
             console.log('Rejoining because Doron disconnected the bot and audio is playing...');
 
-            // Bypass Debounce check for Doron
-            if (Debounce) {
+            if (Debounce2) {
                 console.log('Debounce is active, skipping audio playback.');
                 return;
             }
 
-            Debounce = true; // Apply Debounce for others, but allow Doron to rejoin.
+            Debounce2 = true; // Apply Debounce for others, but allow Doron to rejoin.
 
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
@@ -418,10 +419,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 });
             }, TimeoutDuration);
         } else {
-            // console.log(`Is following ${isFollowingDoron}`)
-            console.log(`Debounce is ${Debounce}`)
-            // if (isFollowingDoron === true) { return; }
-            if (Debounce) { return; }
+            // If someone else disconnected the bot or audio has finished
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
             audioPlayer = null;
@@ -433,9 +431,9 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 }]
             });
         }
-        
+
         // Reset Debounce after a delay to allow future actions
-        setTimeout(() => Debounce = false, TimeoutDuration); 
+        setTimeout(() => Debounce2 = false, TimeoutDuration);
     }
 }
 
@@ -463,47 +461,47 @@ function resetPresence() {
 
 
 client.on('interactionCreate', async interaction => {
-	if (!interaction.isCommand()) return;
+    if (!interaction.isCommand()) return;
 
-	const { commandName } = interaction;
+    const { commandName } = interaction;
 
-	if (Debounce) {
-		return interaction.reply({ content: `Yo nigga I'm currently thirsting for Doron nigga, wait yo turn.`, ephemeral: true });
-	}
+    if (Debounce) {
+        return interaction.reply({ content: `Yo nigga I'm currently thirsting for Doron nigga, wait yo turn.`, ephemeral: true });
+    }
 
-	if (commandName === 'summon') {
-		const invokingMember = interaction.member;
-		const selectedChannel = interaction.options.getChannel('channel');
+    if (commandName === 'summon') {
+        const invokingMember = interaction.member;
+        const selectedChannel = interaction.options.getChannel('channel');
 
-		let voiceChannel;
+        let voiceChannel;
 
-		if (selectedChannel && selectedChannel.isVoiceBased()) {
-			voiceChannel = selectedChannel;
-		} else if (invokingMember.voice.channel) {
-			voiceChannel = invokingMember.voice.channel;
-		} else {
-			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
-		}
+        if (selectedChannel && selectedChannel.isVoiceBased()) {
+            voiceChannel = selectedChannel;
+        } else if (invokingMember.voice.channel) {
+            voiceChannel = invokingMember.voice.channel;
+        } else {
+            return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
+        }
 
-		playerAudio(voiceChannel, false);
-		await interaction.deferReply({ ephemeral: true });
-	} else if (commandName === 'summonfull') {
-		const invokingMember = interaction.member;
-		const selectedChannel = interaction.options.getChannel('channel');
+        playerAudio(voiceChannel, false);
+        await interaction.deferReply({ ephemeral: true });
+    } else if (commandName === 'summonfull') {
+        const invokingMember = interaction.member;
+        const selectedChannel = interaction.options.getChannel('channel');
 
-		let voiceChannel;
+        let voiceChannel;
 
-		if (selectedChannel && selectedChannel.isVoiceBased()) {
-			voiceChannel = selectedChannel;
-		} else if (invokingMember.voice.channel) {
-			voiceChannel = invokingMember.voice.channel;
-		} else {
-			return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
-		}
+        if (selectedChannel && selectedChannel.isVoiceBased()) {
+            voiceChannel = selectedChannel;
+        } else if (invokingMember.voice.channel) {
+            voiceChannel = invokingMember.voice.channel;
+        } else {
+            return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
+        }
 
-		playerAudio(voiceChannel, true);
-		await interaction.deferReply({ ephemeral: true });
-	}
+        playerAudio(voiceChannel, true);
+        await interaction.deferReply({ ephemeral: true });
+    }
 });
 
 
