@@ -418,8 +418,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 });
             }, TimeoutDuration);
         } else {
-            console.log(`Is following ${isFollowingDoron}`)
-            if (isFollowingDoron === true) { return; }
+            // console.log(`Is following ${isFollowingDoron}`)
+            console.log(`Debounce is ${Debounce}`)
+            // if (isFollowingDoron === true) { return; }
+            if (Debounce) { return; }
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
             audioPlayer = null;
