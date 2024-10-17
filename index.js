@@ -209,7 +209,7 @@ function followDoron(channel) {
     });
     setTimeout(() => {
         isFollowingDoron = false;
-    }, TimeoutDuration);
+    }, 1000);
 }
 
 
