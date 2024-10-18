@@ -327,49 +327,48 @@ async function handleVoiceStateUpdate(oldState, newState) {
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
             isSwitchingChannels = true;  // Set the flag to prevent further updates
 
-            // Delay destroying old connection to ensure smooth switch
-            const oldConnection = getVoiceConnection(oldState.guild.id);
-            if (oldConnection) {
-                setTimeout(() => {
-                    oldConnection.destroy();
-                    console.log(`Destroyed old connection to ${oldChannel.name}`);
-                }, 1000);  // Slight delay before destroying the old connection
-            }
+            try {
+                // Move the bot to the new voice channel
+                console.log(`Moving bot to ${newChannel.name}`);
+                await client.voice.move({
+                    channelId: newChannel.id,
+                    guildId: oldState.guild.id,
+                    adapterCreator: newChannel.guild.voiceAdapterCreator,
+                });
 
-            // Join the new voice channel
-            const newConnection = joinVoiceChannel({
-                channelId: newChannel.id,
-                guildId: oldState.guild.id,
-                adapterCreator: oldState.guild.voiceAdapterCreator,
-            });
-
-            if (audioPlayer) {
-                const subscription = newConnection.subscribe(audioPlayer);
-                if (subscription) {
-                    console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
+                // Resubscribe to audio player after moving
+                if (audioPlayer) {
+                    const connection = getVoiceConnection(oldState.guild.id);
+                    const subscription = connection.subscribe(audioPlayer);
+                    if (subscription) {
+                        console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
+                    } else {
+                        console.log('Subscription failed');
+                    }
                 } else {
-                    console.log('Subscription failed');
-                    newConnection.destroy();  // Destroy if subscription fails
+                    console.log('Audio player is null, cannot resubscribe.');
                 }
-            } else {
-                console.log('Audio player is null, cannot resubscribe.');
-                newConnection.destroy();
+
+                client.user.setPresence({
+                    status: 'online',
+                    activities: [{
+                        name: 'Thirsting for Doron rn',
+                        type: ActivityType.Custom,
+                    }]
+                });
+
+                isSwitchingChannels = false;  // Reset the flag after handling the switch
+            } catch (error) {
+                console.error(`Failed to move bot to ${newChannel.name}: ${error}`);
             }
-
-            client.user.setPresence({
-                status: 'online',
-                activities: [{
-                    name: 'Thirsting for Doron rn',
-                    type: ActivityType.Custom,
-                }]
-            });
-
-            isSwitchingChannels = false;  // Reset the flag after handling the switch
         } else if (!newChannel) {
             // Doron left the voice channel entirely
             console.log(`Doron left the voice channel`);
             const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
+            if (connection) {
+                console.log(`Destroying connection to ${oldChannel.name}`);
+                connection.destroy();
+            }
             audioPlayer = null;
             client.user.setPresence({
                 status: 'idle',
@@ -405,31 +404,36 @@ async function handleVoiceStateUpdate(oldState, newState) {
             Debounce2 = true;
 
             setTimeout(() => {
-                const newConnection = joinVoiceChannel({
-                    channelId: oldState.channel.id,
-                    guildId: oldState.guild.id,
-                    adapterCreator: oldState.guild.voiceAdapterCreator,
-                });
+                try {
+                    console.log(`Attempting to rejoin ${oldState.channel.name}`);
+                    const newConnection = joinVoiceChannel({
+                        channelId: oldState.channel.id,
+                        guildId: oldState.guild.id,
+                        adapterCreator: oldState.guild.voiceAdapterCreator,
+                    });
 
-                if (audioPlayer) {
-                    const subscription = newConnection.subscribe(audioPlayer);
-                    if (subscription) {
-                        console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+                    if (audioPlayer) {
+                        const subscription = newConnection.subscribe(audioPlayer);
+                        if (subscription) {
+                            console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+                        } else {
+                            console.log('Subscription failed');
+                        }
                     } else {
-                        console.log('Subscription failed');
+                        console.log('Audio player is null, cannot resubscribe.');
+                        newConnection.destroy();
                     }
-                } else {
-                    console.log('Audio player is null, cannot resubscribe.');
-                    newConnection.destroy();
-                }
 
-                client.user.setPresence({
-                    status: 'online',
-                    activities: [{
-                        name: 'Thirsting for Doron rn',
-                        type: ActivityType.Custom,
-                    }]
-                });
+                    client.user.setPresence({
+                        status: 'online',
+                        activities: [{
+                            name: 'Thirsting for Doron rn',
+                            type: ActivityType.Custom,
+                        }]
+                    });
+                } catch (error) {
+                    console.error(`Failed to rejoin voice channel: ${error}`);
+                }
             }, TimeoutDuration);
         } else {
             // If someone else disconnected the bot or audio has finished
@@ -448,6 +452,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         setTimeout(() => Debounce2 = false, TimeoutDuration);
     }
 }
+
 
 
 
