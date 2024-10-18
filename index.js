@@ -324,7 +324,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
             // Move the bot to the new channel
             const botMember = oldState.guild.members.cache.get(client.user.id);
-            await moveBotToChannel(botMember, newChannel);
+            let newConnection = await moveBotToChannel(botMember, newChannel);
 
             // Resubscribe to the audio player
             if (audioPlayer) {
@@ -480,6 +480,8 @@ async function moveBotToChannel(botMember, newChannel) {
             guildId: oldChannel.guild.id,
             adapterCreator: oldChannel.guild.voiceAdapterCreator,
         });
+
+        return newConnection;
 
         // Optionally, handle audio subscription
         // if (audioPlayer) {
