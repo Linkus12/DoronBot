@@ -327,17 +327,17 @@ async function handleVoiceStateUpdate(oldState, newState) {
             let newConnection = await moveBotToChannel(botMember, newChannel);
 
             // Resubscribe to the audio player
-            if (audioPlayer) {
-                const subscription = newConnection.subscribe(audioPlayer);
-                if (subscription) {
-                    console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
-                } else {
-                    console.log('Subscription failed');
-                }
-            } else {
-                console.log('Audio player is null, cannot resubscribe.');
-                newConnection.destroy(); // Destroy connection if resubscription fails
-            }
+            // if (audioPlayer) {
+            //     const subscription = newConnection.subscribe(audioPlayer);
+            //     if (subscription) {
+            //         console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
+            //     } else {
+            //         console.log('Subscription failed');
+            //     }
+            // } else {
+            //     console.log('Audio player is null, cannot resubscribe.');
+            //     newConnection.destroy(); // Destroy connection if resubscription fails
+            // }
 
             client.user.setPresence({
                 status: 'online',
@@ -397,17 +397,17 @@ async function handleVoiceStateUpdate(oldState, newState) {
                     return;
                 }
 
-                if (audioPlayer) {
-                    const subscription = newConnection.subscribe(audioPlayer);
-                    if (subscription) {
-                        console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
-                    } else {
-                        console.log('Subscription failed');
-                    }
-                } else {
-                    console.log('Audio player is null, cannot resubscribe.');
-                    newConnection.destroy(); // Destroy connection if resubscription fails
-                }
+                // if (audioPlayer) {
+                //     const subscription = newConnection.subscribe(audioPlayer);
+                //     if (subscription) {
+                //         console.log(`Successfully resubscribed to audio player in ${oldState.channel.name}`);
+                //     } else {
+                //         console.log('Subscription failed');
+                //     }
+                // } else {
+                //     console.log('Audio player is null, cannot resubscribe.');
+                //     newConnection.destroy(); // Destroy connection if resubscription fails
+                // }
 
                 client.user.setPresence({
                     status: 'online',
