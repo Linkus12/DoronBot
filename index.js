@@ -382,12 +382,20 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
             Debounce = true; // Apply Debounce for others, but allow Doron to rejoin.
 
+            let newConnection
+
             setTimeout(() => {
                 const newConnection = joinVoiceChannel({
                     channelId: oldState.channel.id,
                     guildId: oldState.guild.id,
                     adapterCreator: oldState.guild.voiceAdapterCreator,
                 });
+
+                if (!newConnection)
+                {
+                    setTimeout(() => Debounce = false, TimeoutDuration); 
+                    return;
+                }
 
                 if (audioPlayer) {
                     const subscription = newConnection.subscribe(audioPlayer);
