@@ -462,13 +462,46 @@ async function handleVoiceStateUpdate(oldState, newState) {
 // }
 
 async function moveBotToChannel(botMember, newChannel) {
+    const oldChannel = botMember.voice.channel;
+    if (!oldChannel || oldChannel.id === newChannel.id) return;
+
     try {
-        await botMember.voice.setChannel(newChannel);
-        console.log(`Bot moved to ${newChannel.name}`);
+        // Leave the current channel
+        const connection = getVoiceConnection(oldChannel.guild.id);
+        if (connection) {
+            connection.destroy(); // Leave the old channel
+        }
+
+        // Join the new channel
+        const newConnection = joinVoiceChannel({
+            channelId: newChannel.id,
+            guildId: oldChannel.guild.id,
+            adapterCreator: oldChannel.guild.voiceAdapterCreator,
+        });
+
+        // Optionally, handle audio subscription
+        // if (audioPlayer) {
+        //     const subscription = newConnection.subscribe(audioPlayer);
+        //     if (subscription) {
+        //         console.log(`Successfully resubscribed to audio player in ${newChannel.name}`);
+        //     } else {
+        //         console.log('Subscription failed, destroying connection.');
+        //         newConnection.destroy();  // Destroy if subscription fails
+        //     }
+        // }
+
+        console.log(`Bot successfully switched to ${newChannel.name}`);
     } catch (error) {
-        console.error(`Error moving bot to channel ${newChannel.name}:`, error);
+        console.error('Error switching voice channel:', error);
     }
 }
+
+// In your handleVoiceStateUpdate function, call switchVoiceChannel:
+if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
+    const botMember = oldState.guild.members.cache.get(client.user.id);
+    await switchVoiceChannel(botMember, newChannel);
+}
+
 
 
 
