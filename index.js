@@ -466,12 +466,6 @@ async function moveBotToChannel(botMember, newChannel) {
     if (!oldChannel || oldChannel.id === newChannel.id) return;
 
     try {
-        // Leave the current channel
-        const connection = getVoiceConnection(oldChannel.guild.id);
-        if (connection) {
-            connection.destroy(); // Leave the old channel
-        }
-
         // Join the new channel
         const newConnection = joinVoiceChannel({
             channelId: newChannel.id,
@@ -496,11 +490,6 @@ async function moveBotToChannel(botMember, newChannel) {
     }
 }
 
-// In your handleVoiceStateUpdate function, call switchVoiceChannel:
-if (oldChannel && newChannel && oldChannel.id !== newChannel.id) {
-    const botMember = oldState.guild.members.cache.get(client.user.id);
-    await switchVoiceChannel(botMember, newChannel);
-}
 
 
 
