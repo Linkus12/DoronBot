@@ -323,10 +323,10 @@ async function handleVoiceStateUpdate(oldState, newState) {
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
 
             // Move the bot to the new channel
-            const newChannelConnection = guild.channels.cache.get(newChannel.id)
+            const newChannelConnection = newChannel.guild.channels.cache.get(newChannel.id)
             client.voice.move({
                 channelId: newChannel.id,
-                guildId: guild.id,
+                guildId: newChannel.guild.id,
                 adapterCreator: newChannel.guild.voiceAdapterCreator
             })
 
