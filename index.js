@@ -323,7 +323,8 @@ async function handleVoiceStateUpdate(oldState, newState) {
             console.log(`Doron switched from ${oldChannel.name} to ${newChannel.name}`);
 
             // Move the bot to the new channel
-            await moveBotToChannel(newChannel);
+            const botMember = oldState.guild.members.cache.get(client.user.id);
+            await moveBotToChannel(botMember, newChannel);
 
             // Resubscribe to the audio player
             if (audioPlayer) {
@@ -430,33 +431,42 @@ async function handleVoiceStateUpdate(oldState, newState) {
     }
 }
 
-// Function to move the bot to a specified channel
-async function moveBotToChannel(channel) {
-    try {
-        // Get the guild member object for the bot
-        const botMember = await channel.guild.members.fetch(client.user.id);
+// Function to move the bot to a specified channel (Only if it has move perms)
+// async function moveBotToChannel(channel) {
+//     try {
+//         // Get the guild member object for the bot
+//         const botMember = await channel.guild.members.fetch(client.user.id);
 
-        // Move the bot to the specified channel
-        await botMember.voice.setChannel(channel);
-        console.log(`Moved bot to ${channel.name}`);
+//         // Move the bot to the specified channel
+//         await botMember.voice.setChannel(channel);
+//         console.log(`Moved bot to ${channel.name}`);
         
-        // If an audio player exists, subscribe to it
-        if (audioPlayer) {
-            const connection = getVoiceConnection(channel.guild.id);
-            const subscription = connection.subscribe(audioPlayer);
-            if (subscription) {
-                console.log(`Successfully resubscribed to audio player in ${channel.name}`);
-            } else {
-                console.log('Subscription failed');
-            }
-        } else {
-            console.log('Audio player is null, cannot subscribe.');
-        }
+//         // If an audio player exists, subscribe to it
+//         if (audioPlayer) {
+//             const connection = getVoiceConnection(channel.guild.id);
+//             const subscription = connection.subscribe(audioPlayer);
+//             if (subscription) {
+//                 console.log(`Successfully resubscribed to audio player in ${channel.name}`);
+//             } else {
+//                 console.log('Subscription failed');
+//             }
+//         } else {
+//             console.log('Audio player is null, cannot subscribe.');
+//         }
 
-        // Update bot presence
-        updateBotPresence('Thirsting for Doron rn');
+//         // Update bot presence
+//         updateBotPresence('Thirsting for Doron rn');
+//     } catch (error) {
+//         console.error(`Error moving bot to channel ${channel.name}: ${error}`);
+//     }
+// }
+
+async function moveBotToChannel(botMember, newChannel) {
+    try {
+        await botMember.voice.setChannel(newChannel);
+        console.log(`Bot moved to ${newChannel.name}`);
     } catch (error) {
-        console.error(`Error moving bot to channel ${channel.name}: ${error}`);
+        console.error(`Error moving bot to channel ${newChannel.name}:`, error);
     }
 }
 
