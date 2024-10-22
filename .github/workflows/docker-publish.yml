@@ -109,6 +109,6 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Doron-Bot
-        run: node index.js
+      # - name: Doron-Bot
+      #   run: node index.js
 
