@@ -225,8 +225,9 @@ function delay(ms) {
 
 let isSwitchingChannels = false
 async function handleVoiceStateUpdate(oldState, newState) {
-    await delay(1000)
-    // Check if the Doron user joined, switched, or left a voice channel
+    await delay(1000);
+
+    // Check if Doron joined, switched, or left a voice channel
     if (newState.member.id === DoronID) {
         const oldChannel = oldState.channel;
         const newChannel = newState.channel;
@@ -255,19 +256,27 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 }]
             });
         } else if (!newChannel) {
-            // Doron left the voice channel entirely
+            // Doron left all voice channels
             console.log(`Doron left the voice channel`);
+
+            // Check if the bot was in the same channel as Doron
             const connection = getVoiceConnection(oldState.guild.id);
-            if (connection) connection.destroy();
-            audioPlayer = null;
-            client.user.setPresence({
-                status: 'idle',
-                activities: [{
-                    name: 'For Doron...',
-                    type: ActivityType.Watching,
-                }]
-            });
-            Debounce = false;
+            const botInSameChannelAsDoron = oldState.channel?.members.has(client.user.id);
+
+            if (connection && botInSameChannelAsDoron) {
+                console.log(`Bot is leaving because it was in the same channel as Doron`);
+                connection.destroy();
+                audioPlayer = null;
+
+                client.user.setPresence({
+                    status: 'idle',
+                    activities: [{
+                        name: 'For Doron...',
+                        type: ActivityType.Watching,
+                    }]
+                });
+                Debounce = false;
+            }
         }
     }
 
@@ -290,9 +299,13 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
             Debounce = true; // Apply Debounce for others, but allow Doron to rejoin.
 
-            let newConnection
-
             setTimeout(() => {
+                const connectionStillActive = audioPlayer?.state?.status !== AudioPlayerStatus.Idle;
+                if (!connectionStillActive) {
+                    console.log('Audio finished, bot will not rejoin.');
+                    return; // Don't rejoin if the audio is no longer playing
+                }
+
                 const newConnection = joinVoiceChannel({
                     channelId: oldState.channel.id,
                     guildId: oldState.guild.id,
@@ -317,10 +330,6 @@ async function handleVoiceStateUpdate(oldState, newState) {
                 });
             }, TimeoutDuration);
         } else {
-            // console.log(Is following ${isFollowingDoron})
-            console.log(`Debounce is ${Debounce}`)
-            // if (isFollowingDoron === true) { return; }
-            // if (Debounce) { return; }
             console.log('Stopping the bot as someone else disconnected it or audio has finished.');
             if (connection) connection.destroy();
             audioPlayer = null;
@@ -337,6 +346,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
         setTimeout(() => Debounce = false, TimeoutDuration);
     }
 }
+
 
 // Function to move the bot to a specified channel (Only if it has move perms)
 // async function moveBotToChannel(channel) {
