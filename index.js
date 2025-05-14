@@ -128,7 +128,7 @@ function setBotPresence(mode) {
 let lastAudioResource = null;
 
 function getRandomAudioFile() {
-    const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3'));
+    const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3') && file !== "DORON.mp3");
 
     if (files.length === 0) {
         console.warn('No .mp3 files found in audio directory.');
@@ -324,7 +324,8 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
         //Check if Doron is still in the voice channel
         const doronInChannel = voiceChannel.members.has(DoronID);
         if (!doronInChannel && !command) {
-            throw new Error("Doron not in voice channel");
+            console.log("Doron not in voice channel");
+            return;
         }
 
         // Disconnect existing conenction (if any)
