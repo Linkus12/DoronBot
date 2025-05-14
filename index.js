@@ -9,7 +9,7 @@ const path = require('path');
 
 const { ActivityType } = require('discord.js');
 
-const { TOKEN } = process.env;
+const TOKEN = process.env;
 let CLIENT_ID;
 
 const TimeoutDuration = 500
