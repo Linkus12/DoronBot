@@ -28,8 +28,8 @@ const client = new Client({
     ]
 });
 
-const DoronID = '317621199880585216' //GorillaGoVroom ID
-// const DoronID = '435868622825586688' //Doron ID
+// const DoronID = '317621199880585216' //GorillaGoVroom ID
+const DoronID = '435868622825586688' //Doron ID
 
 const voiceStates = new Map();
 const lastVoiceChannelMap = new Map();
