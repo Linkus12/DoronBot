@@ -18,7 +18,7 @@ EXPOSE 3000
 
 # set ENV variables
 ARG DISCORD_TOKEN
-ENV TOKEN=$DISCORD_TOKEN
+ENV DISCORD_TOKEN=$DISCORD_TOKEN
 
 # Command to run the application
 CMD ["node", "index.js"]
