@@ -21,7 +21,7 @@ env:
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
-  TOKEN: ${{ secrets.DISCORD_TOKEN }}
+  DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
   CLIENT_ID: ${{ secrets.DISCORD_CLIENT }}
 
 
