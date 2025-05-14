@@ -253,7 +253,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
 
     // Doron JOINED or SWITCHED VC
     if (newChannel && newChannel !== oldChannel) {
-        if (state.isJoining) return;
+        // if (state.isJoining) return;
 
         try {
             await safeJoinVoiceChannel(newChannel);
@@ -307,9 +307,9 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
 
     // Prevent double join attempts.
     const state = voiceStates.get(guildId) || {};
-    if (state.isJoining) {
-        throw new Error("Already joining a voice channel");
-    }
+    // if (state.isJoining) {
+    //     throw new Error("Already joining a voice channel");
+    // }
 
     if (state.timeout) clearInterval(state.timeout);
 
