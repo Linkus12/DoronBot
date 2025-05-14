@@ -381,7 +381,7 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
     const { commandName } = interaction;
-    if (commandName !== 'summon' && commandName !== 'summonfull', true) return;
+    if (commandName !== 'summon' && commandName !== 'summonfull') return;
 
     const voiceChannel = resolveVoiceChannel(interaction);
     if (!voiceChannel) {
