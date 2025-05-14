@@ -301,7 +301,7 @@ async function waitForBotToJoinVoiceChannel(guildId, timeoutDuration = 10000) {
 
 
 
-async function safeJoinVoiceChannel(voiceChannel, full = false) {
+async function safeJoinVoiceChannel(voiceChannel, full = false, command = false) {
 
     const guildId = voiceChannel.guild.id;
 
@@ -323,7 +323,7 @@ async function safeJoinVoiceChannel(voiceChannel, full = false) {
 
         //Check if Doron is still in the voice channel
         const doronInChannel = voiceChannel.members.has(DoronID);
-        if (!doronInChannel) {
+        if (!doronInChannel && !command) {
             throw new Error("Doron not in voice channel");
         }
 
@@ -381,7 +381,7 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand()) return;
 
     const { commandName } = interaction;
-    if (commandName !== 'summon' && commandName !== 'summonfull') return;
+    if (commandName !== 'summon' && commandName !== 'summonfull', true) return;
 
     const voiceChannel = resolveVoiceChannel(interaction);
     if (!voiceChannel) {
@@ -391,7 +391,7 @@ client.on('interactionCreate', async interaction => {
     await interaction.deferReply({ ephemeral: true });
 
     try {
-        await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull');
+        await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull', true);
     } catch (err) {
         console.error(err);
         return interaction.followUp({ content: `Couldn't join VC, dawg. Maybe I'm already busy or Doron be wildin'.`, ephemeral: true });
