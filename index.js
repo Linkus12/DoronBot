@@ -228,8 +228,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
     if (isBot) {
         // Someone disconnected the bot
     if (wasInChannel && !isNowInChannel) {
-        const leftOnPurpose = botLeftOnPurposeMap.get(guildId);
-        if (leftOnPurpose) {
+        if (!botLeftOnPurposeMap.get(guildId)) {
             botLeftOnPurposeMap.set(guildId, false);
             return;
         }
@@ -348,11 +347,11 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
         lastVoiceChannelMap.set(guildId, voiceChannel);
         await waitForBotToJoinVoiceChannel(guildId);
 
-        botLeftOnPurposeMap.set(voiceChannel, false);
+        botLeftOnPurposeMap.set(guildId, false);
 
         // Play Audio
         await playerAudio(voiceChannel, full);
-        botLeftOnPurposeMap.set(voiceChannel, true);
+        botLeftOnPurposeMap.set(guildId, true);
     } finally {
         //Unlock
         state.isJoining = false;
