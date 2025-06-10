@@ -54,7 +54,7 @@ const commands = [
                 .addChannelTypes(ChannelType.GuildVoice)),
 ].map(command => command.toJSON());
 
-const GUILD_ID = "1022540810589319168";
+const GUILD_ID = "308598343247069185";
 
 const registerSpecificCommand = async (commands) => {
     const rest = new REST({ version: '9' }).setToken(TOKEN);
@@ -175,6 +175,8 @@ async function playerAudio(channel, full = false) {
         audioPlayer.on(AudioPlayerStatus.Idle, () => {
             const connection = getVoiceConnection(channel.guild.id);
             if (connection) {
+                // Set the flag BEFORE disconnecting
+                botLeftOnPurposeMap.set(channel.guild.id, true);
                 connection.destroy();
                 resetPresence();
                 Debounce = false;
@@ -351,7 +353,7 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
 
         // Play Audio
         await playerAudio(voiceChannel, full);
-        botLeftOnPurposeMap.set(guildId, true);
+        botLeftOnPurposeMap.set(guildId, false);
     } finally {
         //Unlock
         state.isJoining = false;
