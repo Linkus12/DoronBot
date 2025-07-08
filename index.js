@@ -231,14 +231,13 @@ async function handleVoiceStateUpdate(oldState, newState) {
         // Someone disconnected the bot
     if (wasInChannel && !isNowInChannel) {
         if (!botLeftOnPurposeMap.get(guildId)) {
-            botLeftOnPurposeMap.set(guildId, false);
-            return;
+            console.log("Bot was disconnected unexpectedly, rejoining...");
+            // botLeftOnPurposeMap.set(guildId, false);
+            await safeJoinVoiceChannel(lastVoiceChannelMap.get(guildId));
+        } else {
+            console.log("Bot left on purpose. Not rejoining.");
         }
-
-        await safeJoinVoiceChannel(lastVoiceChannelMap.get(guildId));
-
-        console.log("Bot was disconnected from a voice channel by someone");
-    }
+        return;
     }
 
 
