@@ -1,409 +1,425 @@
 // DOROONNN I NEED THE SHOKO MOCKO DORONNNNN (Made with love by GorillaGoVroom and BakaDolev <3).
-// require('dotenv').config();
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ChannelType } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require('@discordjs/voice');
-
-
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-const { ActivityType } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  SlashCommandBuilder,
+  REST,
+  Routes,
+  ChannelType,
+  ActivityType
+} = require('discord.js');
 
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+  getVoiceConnection
+} = require('@discordjs/voice');
+
+/* --------------------- Config --------------------- */
 const TOKEN = process.env.DISCORD_TOKEN;
-let CLIENT_ID;
+if (!TOKEN) {
+  console.error('DISCORD_TOKEN not provided in environment.');
+  process.exit(1);
+}
 
-const TimeoutDuration = 500
+const GUILD_ID = '308598343247069185';
+const DoronID = '435868622825586688'; // Doron ID
+const audioDirectory = path.resolve(__dirname, './Audio_Files');
+const TimeoutDuration = 500; // ms debounce for audio spamming
+const DEFAULT_FULL_AUDIO = path.join(audioDirectory, 'DORON.mp3');
+/* -------------------------------------------------- */
 
-const audioDirectory = "./Audio_Files" //The MP3 audio directory
+/* -------------------- State ----------------------- */
+// Keep minimal state maps but with actual names I CAN UNDERSTAND GRAHHH
+const voiceState = new Map();            // guildId => { isJoining: bool, connection }
+const lastVoiceChannel = new Map();      // guildId => VoiceChannel
+const botLeftOnPurpose = new Map();      // guildId => bool
+let lastAudioPath = null;
+let debounce = false;
+let audioPlayer = null;
 
-let latestAudioFile = null;
-
-let Debounce = false;
-
+/* ------------------- Discord client -------------- */
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMembers,
-    ]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMembers
+  ]
 });
 
-// const DoronID = '317621199880585216' //GorillaGoVroom ID
-const DoronID = '435868622825586688' //Doron ID
-
-const voiceStates = new Map();
-const lastVoiceChannelMap = new Map();
-const botLeftOnPurposeMap = new Map();
-
+/* ------------------ Commands ---------------------- */
 const commands = [
-    new SlashCommandBuilder()
-        .setName('summon')
-        .setDescription('Summon me for Doron ;))')
-        .addChannelOption(option =>
-            option.setName('channel')
-                .setDescription('Choose the channel to summon me in (optional)')
-                .setRequired(false)
-                .addChannelTypes(ChannelType.GuildVoice)),
-    new SlashCommandBuilder()
-        .setName('summonfull')
-        .setDescription("Summon me for Doron le full ;))")
-        .addChannelOption(option =>
-            option.setName('channel')
-                .setDescription('Choose the channel to summon me in (optional)')
-                .setRequired(false)
-                .addChannelTypes(ChannelType.GuildVoice)),
-].map(command => command.toJSON());
+  new SlashCommandBuilder()
+    .setName('summon')
+    .setDescription('Summon me for Doron ;))')
+    .addChannelOption(opt =>
+      opt.setName('channel')
+        .setDescription('Choose the channel to summon me in (optional)')
+        .setRequired(false)
+        .addChannelTypes(ChannelType.GuildVoice)
+    ),
+  new SlashCommandBuilder()
+    .setName('summonfull')
+    .setDescription("Summon me for Doron le full ;))")
+    .addChannelOption(opt =>
+      opt.setName('channel')
+        .setDescription('Choose the channel to summon me in (optional)')
+        .setRequired(false)
+        .addChannelTypes(ChannelType.GuildVoice)
+    )
+].map(c => c.toJSON());
 
-const GUILD_ID = "308598343247069185";
-
-const registerSpecificCommand = async (commands) => {
-    const rest = new REST({ version: '9' }).setToken(TOKEN);
-    try {
-        await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-const registerCommand = async (commands) => {
-    const rest = new REST({ version: '9' }).setToken(TOKEN);
-    try {
-        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-client.once('ready', async () => {
-
-    setBotPresence("idle");
-
-    CLIENT_ID = `${client.user.id}`;
-
-    await registerSpecificCommand(commands);
-    registerCommand(commands);
-    console.log('Doron is ready ;) ...');
-
-    // Fetch Doron object
-    const Doron = await client.users.fetch(DoronID);
-
-    // Iterate through all guilds the bot is in
-    for (const guild of client.guilds.cache.values()) {
-        try {
-            // Fetch the member from the guild
-            const member = await guild.members.fetch(DoronID);
-
-            // Check if Doron is already in a voice channel
-            if (member.voice.channel) {
-                console.log(`Doron is in a voice channel in guild: ${guild.name}, joining...`);
-                await safeJoinVoiceChannel(member.voice.channel);  // Join Doron’s channel
-                return; // Exit after joining the first voice channel found
-            } else {
-                console.log(`Doron is not in a voice channel in guild: ${guild.name}.`);
-            }
-        } catch (error) {
-            console.error(`Could not fetch member in guild: ${guild.name}.`, error);
-        }
-    }
-
-    console.log('Doron is not in any voice channel in any guild.');
-
-});
-
-function setBotPresence(mode) {
-    const config = {
-        idle: {
-            status: 'idle',
-            activities: [{ name: 'For Doron...', type: ActivityType.Watching }]
-        },
-        active: {
-            status: 'online',
-            activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom }]
-        }
-    };
-    client.user.setPresence(config[mode]);
+async function registerCommands() {
+  const rest = new REST({ version: '9' }).setToken(TOKEN);
+  try {
+    await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
+    // Also attempt global registration (non-blocking)
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands }).catch(() => {});
+  } catch (err) {
+    console.error('Failed to register commands:', err);
+  }
 }
 
+/* ---------------- Presence helpers ---------------- */
+function setBotPresence(mode = 'idle') {
+  const presets = {
+    idle: { status: 'idle', activities: [{ name: 'For Doron...', type: ActivityType.Watching }] },
+    active: { status: 'online', activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom || ActivityType.Playing }] }
+  };
 
-let lastAudioResource = null;
-
-function getRandomAudioFile() {
-    const files = fs.readdirSync(audioDirectory).filter(file => file.endsWith('.mp3') && file !== "DORON.mp3");
-
-    if (files.length === 0) {
-        console.warn('No .mp3 files found in audio directory.');
-        return null;
-    }
-
-    // If only one file exists, return it regardless of lastAudioResource
-    if (files.length === 1) {
-        lastAudioResource = path.join(audioDirectory, files[0]);
-        return lastAudioResource;
-    }
-
-    let selectedFile;
-
-    // Keep selecting until we get a different file than the last one
-    do {
-        const randomIndex = Math.floor(Math.random() * files.length);
-        selectedFile = path.join(audioDirectory, files[randomIndex]);
-    } while (selectedFile === lastAudioResource && files.length > 1);
-
-    lastAudioResource = selectedFile;
-    return selectedFile;
-}
-let audioPlayer;
-
-
-async function playerAudio(channel, full = false) {
-    if (!channel) {
-        console.error("Channel is undefined, unable to join or play audio");
-        return;
-    }
-
-    //Debouce so audio isn't spammed
-    if (Debounce) return;
-    Debounce = true;
-    setTimeout(() => Debounce = false, TimeoutDuration);
-
-    //Set bot to online
-    setBotPresence("active");
-
-    //Create or reuse audio player
-    if (!audioPlayer) {
-        audioPlayer = createAudioPlayer(); //Create the audio player.
-        audioPlayer.on(AudioPlayerStatus.Idle, () => {
-            const connection = getVoiceConnection(channel.guild.id);
-            if (connection) {
-                // Set the flag BEFORE disconnecting
-                botLeftOnPurposeMap.set(channel.guild.id, true);
-                connection.destroy();
-                resetPresence();
-                Debounce = false;
-            }
-            audioPlayer = null;
-        });
-
-        audioPlayer.on('error', error => {
-            console.error('Audio Player Error:', error.message);
-            audioPlayer = null;
-        });
-    }
-
-    const audioFile = full ? './Audio_Files/DORON.mp3' : getRandomAudioFile();
-    const resource = createAudioResource(audioFile);
-    if (!resource) {
-        console.error('Audio resource creation failed.');
-        return;
-    }
-
-    try {
-
-        //Subscribe player
-        const connection = getVoiceConnection(channel.guild.id);
-        if (connection) connection.subscribe(audioPlayer);
-        //Play sound
-        audioPlayer.play(resource);
-    } catch (err) {
-        console.error('Failed to play audio', err.message);
-    }
+  const cfg = presets[mode] || presets.idle;
+  try {
+    client.user.setPresence(cfg);
+  } catch (e) {
+    console.warn('Failed to set presence:', e?.message || e);
+  }
 }
 
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+/* ---------------- Audio helpers ------------------- */
+function listAudioFiles() {
+  try {
+    if (!fs.existsSync(audioDirectory)) return [];
+    return fs.readdirSync(audioDirectory).filter(f => f.endsWith('.mp3') && f !== 'DORON.mp3');
+  } catch (err) {
+    console.error('Failed to list audio files:', err);
+    return [];
+  }
 }
 
-async function handleVoiceStateUpdate(oldState, newState) {
-    //Only track Doron
-    const wasInChannel = oldState.channelId;
-    const isNowInChannel = newState.channelId;
-
-    const isBot = newState.id === client.user.id;
-
-    const guild = newState.guild;
-    const guildId = guild.id;
-    const newChannel = newState.channel;
-    const oldChannel = oldState.channel;
-
-    const state = voiceStates.get(guildId) || { isJoining: false };
-
-    if (isBot) {
-        // Someone disconnected the bot
-    if (wasInChannel && !isNowInChannel) {
-        if (!botLeftOnPurposeMap.get(guildId)) {
-            console.log("Bot was disconnected unexpectedly, rejoining...");
-            // botLeftOnPurposeMap.set(guildId, false);
-            await safeJoinVoiceChannel(lastVoiceChannelMap.get(guildId));
-        } else {
-            console.log("Bot left on purpose. Not rejoining.");
-        }
-        return;
-    }
-
-
-    if (newState.id !== DoronID) return; //After finishing tracking the bot, track Doron
-
-    // Doron LEFT VC
-    if (!newChannel) {
-        const connection = getVoiceConnection(guildId);
-        if (connection) connection.destroy();
-        voiceStates.delete(guildId);
-        return;
-    }
-
-    // Doron JOINED or SWITCHED VC
-    if (newChannel && newChannel !== oldChannel) {
-        // if (state.isJoining) return;
-
-        try {
-            await safeJoinVoiceChannel(newChannel);
-        } catch(err) {
-            console.warn(`Voice join failed: ${err.message}`);
-        }
-    }
-}
-
-function resetPresence() {
-    setBotPresence("idle");
-}
-
-
-async function waitForBotToJoinVoiceChannel(guildId, timeoutDuration = 10000) {
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error('Timeout: Bot did not join a voice channel in time.'));
-        }, timeoutDuration);
-
-        const checkVoiceChannel = () => {
-            const guild = client.guilds.cache.get(guildId);
-            if (!guild) {
-                clearTimeout(timeout);
-                reject(new Error('Guild not found.'));
-                return;
-            }
-
-            const isInVoiceChannel = guild.channels.cache.some(channel =>
-                (channel.type === 2 || channel.type === 'GUILD_VOICE') && // type === 2 for voice channels in v14+
-                channel.members.has(client.user.id)
-            );
-
-            if (isInVoiceChannel) {
-                clearTimeout(timeout);
-                resolve();
-            } else {
-                setTimeout(checkVoiceChannel, 1000);
-            }
-        };
-
-        checkVoiceChannel();
-    });
-}
-
-
-
-async function safeJoinVoiceChannel(voiceChannel, full = false, command = false) {
-
-    const guildId = voiceChannel.guild.id;
-
-    // Prevent double join attempts.
-    const state = voiceStates.get(guildId) || {};
-    // if (state.isJoining) {
-    //     throw new Error("Already joining a voice channel");
-    // }
-
-    if (state.timeout) clearInterval(state.timeout);
-
-    // Mark as joining
-    state.isJoining = true;
-    voiceStates.set(guildId, state);
-
-    try {
-        // Delay 1.5s to handle quick switches
-        await delay(1000);
-
-        //Check if Doron is still in the voice channel
-        const doronInChannel = voiceChannel.members.has(DoronID);
-        if (!doronInChannel && !command) {
-            console.log("Doron not in voice channel");
-            return;
-        }
-
-        // Disconnect existing conenction (if any)
-        const oldConnection = getVoiceConnection(guildId);
-        if (oldConnection) {
-            oldConnection.destroy();
-        }
-
-        // Join the new voice channel
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: guildId,
-            adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-            selfDeaf: false,
-        });
-
-        //Save connection
-        state.connection = connection;
-        voiceStates.set(guildId, state);
-        lastVoiceChannelMap.set(guildId, voiceChannel);
-        await waitForBotToJoinVoiceChannel(guildId);
-
-        botLeftOnPurposeMap.set(guildId, false);
-
-        // Play Audio
-        await playerAudio(voiceChannel, full);
-        botLeftOnPurposeMap.set(guildId, false);
-    } finally {
-        //Unlock
-        state.isJoining = false;
-        voiceStates.set(guildId, state);
-    }
-
-}
-
-function resolveVoiceChannel(interaction) {
-    const selectedChannel = interaction.options.getChannel('channel');
-    const invokingMember = interaction.member;
-
-    if (selectedChannel && selectedChannel.isVoiceBased()) {
-        return selectedChannel;
-    }
-
-    if (invokingMember.voice.channel) {
-        return invokingMember.voice.channel;
-    }
-
+function pickRandomAudio() {
+  const files = listAudioFiles();
+  if (files.length === 0) {
+    console.warn('No .mp3 files found in audio directory.');
     return null;
+  }
+  if (files.length === 1) {
+    lastAudioPath = path.join(audioDirectory, files[0]);
+    return lastAudioPath;
+  }
+
+  let selected;
+  do {
+    selected = path.join(audioDirectory, files[Math.floor(Math.random() * files.length)]);
+  } while (files.length > 1 && selected === lastAudioPath);
+
+  lastAudioPath = selected;
+  return selected;
 }
 
+function createResourceForFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    console.error('Audio file not found:', filePath);
+    return null;
+  }
+  try {
+    // createAudioResource accepts a stream or filename -- use stream to be explicit
+    const stream = fs.createReadStream(filePath);
+    return createAudioResource(stream, { inlineVolume: false });
+  } catch (err) {
+    console.error('Failed to create audio resource:', err);
+    return null;
+  }
+}
 
+function ensureAudioPlayer(channel) {
+  if (audioPlayer) return audioPlayer;
+
+  audioPlayer = createAudioPlayer();
+
+  audioPlayer.on(AudioPlayerStatus.Idle, () => {
+    try {
+      // When done, destroy connection and reset
+      const conn = getVoiceConnection(channel.guild.id);
+      if (conn) {
+        botLeftOnPurpose.set(channel.guild.id, true);
+        conn.destroy();
+      }
+    } catch (err) {
+      console.warn('Error cleaning up after audio idle:', err);
+    } finally {
+      audioPlayer = null;
+      debounce = false;
+      setBotPresence('idle');
+    }
+  });
+
+  audioPlayer.on('error', err => {
+    console.error('Audio player error:', err?.message || err);
+    audioPlayer = null;
+    debounce = false;
+    setBotPresence('idle');
+  });
+
+  return audioPlayer;
+}
+
+/* ------------------ Join & Play ------------------- */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function waitForJoin(guildId, timeout = 10000) {
+  // Wait until connection found OR timeout
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const conn = getVoiceConnection(guildId);
+    if (conn) return;
+    await sleep(250);
+  }
+  throw new Error('Timeout waiting for bot to appear in voice channel.');
+}
+
+/**
+ * Safely join a voice channel and play audio.
+ * - If `command` is false, we require Doron to be in that channel; commands override that.
+ * - `full` chooses the special DORON.mp3 file.
+ */
+async function safeJoinVoiceChannel(voiceChannel, full = false, command = false) {
+  if (!voiceChannel) throw new Error('No voice channel provided to join.');
+
+  const guildId = voiceChannel.guild.id;
+  const state = voiceState.get(guildId) || { isJoining: false };
+
+  if (state.isJoining) {
+    // already joining -- ignore duplicate attempt
+    return;
+  }
+
+  state.isJoining = true;
+  voiceState.set(guildId, state);
+
+  try {
+    // small delay to let transient switches finish
+    await sleep(1000);
+
+    const doronInChannel = voiceChannel.members.has(DoronID);
+    if (!doronInChannel && !command) {
+      // Not Doron and not a forced command summon -> bail out
+      console.log('Doron not present in channel; aborting join (non-command).');
+      return;
+    }
+
+    // Tear down previous connection if exists
+    const prevConn = getVoiceConnection(guildId);
+    if (prevConn) {
+      try { prevConn.destroy(); } catch (e) { /* ignore */ }
+    }
+
+    // Join
+    const connection = joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId,
+      adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+      selfDeaf: false
+    });
+
+    // Save connection reference
+    state.connection = connection;
+    voiceState.set(guildId, state);
+    lastVoiceChannel.set(guildId, voiceChannel);
+    botLeftOnPurpose.set(guildId, false);
+
+    // Wait until connection appears (or timeout)
+    await waitForJoin(guildId);
+
+    // Play audio
+    await playAudioInChannel(voiceChannel, full);
+
+    // ensure we explicitly mark not left on purpose after playing
+    botLeftOnPurpose.set(guildId, false);
+  } finally {
+    state.isJoining = false;
+    voiceState.set(guildId, state);
+  }
+}
+
+async function playAudioInChannel(channel, full = false) {
+  if (!channel) throw new Error('No channel to play audio in.');
+
+  if (debounce) return;          // prevent spam
+  debounce = true;
+  setTimeout(() => { debounce = false; }, TimeoutDuration);
+
+  setBotPresence('active');
+
+  const player = ensureAudioPlayer(channel);
+
+  const audioFile = full ? DEFAULT_FULL_AUDIO : pickRandomAudio();
+  if (!audioFile) {
+    console.error('No audio file chosen; aborting play.');
+    debounce = false;
+    setBotPresence('idle');
+    return;
+  }
+
+  const resource = createResourceForFile(audioFile);
+  if (!resource) {
+    debounce = false;
+    setBotPresence('idle');
+    return;
+  }
+
+  try {
+    // If already connected, subscribe; otherwise subscription happens automatically via createAudioPlayer usage
+    const existingConn = getVoiceConnection(channel.guild.id);
+    if (existingConn) existingConn.subscribe(player);
+
+    player.play(resource);
+  } catch (err) {
+    console.error('Failed to play audio:', err?.message || err);
+    debounce = false;
+    setBotPresence('idle');
+  }
+}
+
+/* ---------------- Voice state tracking ------------- */
+/**
+ * Handles voiceStateUpdate events.
+ * We only want to track Doron and his shoko mocko; we also handle the bot being disconnected unexpectedly.
+ */
+async function handleVoiceStateUpdate(oldState, newState) {
+  try {
+    const guild = newState.guild || oldState.guild;
+    if (!guild) return;
+    const guildId = guild.id;
+
+    // If the bot itself was disconnected unexpectedly, rejoin where appropriate
+    if (newState.id === client.user.id) {
+      const wasInChannel = oldState.channelId;
+      const isNowInChannel = newState.channelId;
+      if (wasInChannel && !isNowInChannel) {
+        // bot left voice; if not left on purpose, try to rejoin last known channel
+        const leftOnPurpose = botLeftOnPurpose.get(guildId);
+        if (!leftOnPurpose) {
+          const lastChan = lastVoiceChannel.get(guildId);
+          if (lastChan) {
+            console.log('Bot disconnected unexpectedly; attempting to rejoin last channel...');
+            await safeJoinVoiceChannel(lastChan).catch(e => console.warn('Rejoin failed:', e.message || e));
+          }
+        } else {
+          console.log('Bot left on purpose, not rejoining.');
+        }
+      }
+      return;
+    }
+
+    // We only care about Doron events beyond this point
+    if (newState.id !== DoronID) return;
+
+    const oldChannel = oldState.channel;
+    const newChannel = newState.channel;
+
+    // Doron left VC entirely
+    if (!newChannel) {
+      const conn = getVoiceConnection(guildId);
+      if (conn) {
+        try { conn.destroy(); } catch (e) { /* ignore */ }
+      }
+      voiceState.delete(guildId);
+      return;
+    }
+
+    // Doron joined or switched VC
+    if (newChannel && newChannel !== oldChannel) {
+      try {
+        await safeJoinVoiceChannel(newChannel);
+      } catch (err) {
+        console.warn('Failed to join when Doron moved:', err?.message || err);
+      }
+    }
+  } catch (err) {
+    console.error('Error in voiceStateUpdate handler:', err);
+  }
+}
+
+/* --------------- Interaction handler ---------------- */
+function resolveVoiceChannelFromInteraction(interaction) {
+  const selected = interaction.options.getChannel('channel');
+  if (selected && selected.isVoiceBased && selected.isVoiceBased()) return selected;
+  if (interaction.member && interaction.member.voice && interaction.member.voice.channel) return interaction.member.voice.channel;
+  return null;
+}
 
 client.on('interactionCreate', async interaction => {
+  try {
     if (!interaction.isCommand()) return;
-
     const { commandName } = interaction;
     if (commandName !== 'summon' && commandName !== 'summonfull') return;
 
-    const voiceChannel = resolveVoiceChannel(interaction);
+    const voiceChannel = resolveVoiceChannelFromInteraction(interaction);
     if (!voiceChannel) {
-        return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
+      return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
     }
 
     await interaction.deferReply({ ephemeral: true });
-
     try {
-        await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull', true);
+      await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull', true);
+      return interaction.followUp({ content: `Summoned.`, ephemeral: true }).catch(() => {});
     } catch (err) {
-        console.error(err);
-        return interaction.followUp({ content: `Couldn't join VC, dawg. Maybe I'm already busy or Doron be wildin'.`, ephemeral: true });
+      console.error('Command summon failed:', err);
+      return interaction.followUp({ content: `Couldn't join VC, dawg. Maybe I'm already busy or Doron be wildin'.`, ephemeral: true });
     }
+  } catch (err) {
+    console.error('Error handling interaction:', err);
+  }
 });
 
+/* ------------------- Client events ----------------- */
+client.once('ready', async () => {
+  console.log('Client ready as', client.user.tag);
+  setBotPresence('idle');
 
+  // Register commands (guild + global)
+  await registerCommands();
 
+  // Attempt to find Doron (in any guild) and auto-join if found in a voice channel
+  try {
+    for (const guild of client.guilds.cache.values()) {
+      try {
+        const member = await guild.members.fetch(DoronID).catch(() => null);
+        if (member && member.voice && member.voice.channel) {
+          console.log(`Doron is in voice in guild ${guild.name} — joining...`);
+          await safeJoinVoiceChannel(member.voice.channel).catch(e => console.warn('Auto-join failed:', e?.message || e));
+          return; // join the first found occurrence
+        }
+      } catch (err) {
+        // continue scanning other guilds
+      }
+    }
+    console.log('Doron not found in voice channels on startup.');
+  } catch (err) {
+    console.warn('Startup Doron-scan failed:', err);
+  }
+});
 
 client.on('voiceStateUpdate', handleVoiceStateUpdate);
 
-
-
-client.login(TOKEN);
+/* -------------------- Start ------------------------ */
+client.login(TOKEN).catch(err => {
+  console.error('Failed to login:', err);
+  process.exit(1);
+});
