@@ -76,7 +76,7 @@ const commands = [
 ].map(c => c.toJSON());
 
 async function registerCommands() {
-  const rest = new REST({ version: '9' }).setToken(TOKEN);
+  const rest = new REST({ version: '10' }).setToken(TOKEN);
   try {
     await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
     // Also attempt global registration (non-blocking)
@@ -147,7 +147,7 @@ function createResourceForFile(filePath) {
   }
 }
 
-function ensureAudioPlayer(channel) {
+function ensureAudioPlayer(guildId) {
   if (audioPlayer) return audioPlayer;
 
   audioPlayer = createAudioPlayer();
@@ -155,9 +155,9 @@ function ensureAudioPlayer(channel) {
   audioPlayer.on(AudioPlayerStatus.Idle, () => {
     try {
       // When done, destroy connection and reset
-      const conn = getVoiceConnection(channel.guild.id);
+      const conn = getVoiceConnection(guildId);
       if (conn) {
-        botLeftOnPurpose.set(channel.guild.id, true);
+        botLeftOnPurpose.set(guildId, true);
         conn.destroy();
       }
     } catch (err) {
@@ -266,7 +266,7 @@ async function playAudioInChannel(channel, full = false) {
 
   setBotPresence('active');
 
-  const player = ensureAudioPlayer(channel);
+  const player = ensureAudioPlayer(channel.guild.id);
 
   const audioFile = full ? DEFAULT_FULL_AUDIO : pickRandomAudio();
   if (!audioFile) {
@@ -359,7 +359,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
 /* --------------- Interaction handler ---------------- */
 function resolveVoiceChannelFromInteraction(interaction) {
   const selected = interaction.options.getChannel('channel');
-  if (selected && selected.isVoiceBased && selected.isVoiceBased()) return selected;
+  if (selected?.isVoiceBased?.()) return selected;
   if (interaction.member && interaction.member.voice && interaction.member.voice.channel) return interaction.member.voice.channel;
   return null;
 }
