@@ -2,7 +2,7 @@
   "name": "franklin",
   "version": "1.0.0",
   "description": "Franklin Loves Doron",
-  "main": "bot.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
