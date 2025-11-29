@@ -1,26 +1,26 @@
-# Use the official Node.js image as the base image
-FROM node:22
+# Use Node 20 (LTS) - More stable for audio libraries
+FROM node:20
 
-# Set the working directory
-WORKDIR ./
+# Install system build tools for native modules (prevents crashes)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+WORKDIR /usr/src/app
+
+# Copy package files (we assume you DELETED package-lock.json already)
+COPY package.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of the application code
+# Copy the rest of the code
 COPY . .
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 3000
 
-# set ENV variables
-ARG DISCORD_TOKEN
-ENV DISCORD_TOKEN=$DISCORD_TOKEN
-ARG TARGET_USER_ID
-ENV TARGET_USER_ID=$TARGET_USER_ID
-
-# Command to run the application
+# Start the bot
 CMD ["node", "index.js"]
