@@ -386,7 +386,7 @@ client.on('interactionCreate', async interaction => {
 });
 
 /* ------------------- Client events ----------------- */
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log('Client ready as', client.user.tag);
   setBotPresence('idle');
 
