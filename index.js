@@ -28,8 +28,8 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-const GUILD_ID = '308598343247069185';
-const DoronID = '435868622825586688'; // Doron ID
+// Remove GUILD_ID. We don't need it for global bots.
+const TARGET_USER_ID = process.env.TARGET_USER_ID; // Read from Docker Env
 const audioDirectory = path.resolve(__dirname, './Audio_Files');
 const TimeoutDuration = 500; // ms debounce for audio spamming
 const DEFAULT_FULL_AUDIO = path.join(audioDirectory, 'DORON.mp3');
@@ -78,9 +78,8 @@ const commands = [
 async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(TOKEN);
   try {
-    await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
-    // Also attempt global registration (non-blocking)
-    await rest.put(Routes.applicationCommands(client.user.id), { body: commands }).catch(() => {});
+    console.log('Registering global commands...');
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands }); 
   } catch (err) {
     console.error('Failed to register commands:', err);
   }
@@ -216,10 +215,8 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
     // small delay to let transient switches finish
     await sleep(1000);
 
-    const doronInChannel = voiceChannel.members.has(DoronID);
-    if (!doronInChannel && !command) {
-      // Not Doron and not a forced command summon -> bail out
-      console.log('Doron not present in channel; aborting join (non-command).');
+    if (TARGET_USER_ID && !voiceChannel.members.has(TARGET_USER_ID) && !command) {
+      console.log('Target user not present; aborting.');
       return;
     }
 
@@ -328,7 +325,7 @@ async function handleVoiceStateUpdate(oldState, newState) {
     }
 
     // We only care about Doron events beyond this point
-    if (newState.id !== DoronID) return;
+    if (TARGET_USER_ID && newState.id !== TARGET_USER_ID) return;
 
     const oldChannel = oldState.channel;
     const newChannel = newState.channel;
@@ -400,7 +397,8 @@ client.once('ready', async () => {
   try {
     for (const guild of client.guilds.cache.values()) {
       try {
-        const member = await guild.members.fetch(DoronID).catch(() => null);
+        if (!TARGET_USER_ID) return; // Skip if no target set
+        const member = await guild.members.fetch(TARGET_USER_ID).catch(() => null);
         if (member && member.voice && member.voice.channel) {
           console.log(`Doron is in voice in guild ${guild.name} — joining...`);
           await safeJoinVoiceChannel(member.voice.channel).catch(e => console.warn('Auto-join failed:', e?.message || e));
