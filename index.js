@@ -88,7 +88,7 @@ async function registerCommands() {
 /* ---------------- Presence helpers ---------------- */
 function setBotPresence(mode = 'idle') {
   const presets = {
-    idle: { status: 'idle', activities: [{ name: 'For Doron...', type: ActivityType.Watching }] },
+    idle: { status: 'idle', activities: [{ name: 'Looking for Doron...', type: ActivityType.Watching }] },
     active: { status: 'online', activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom || ActivityType.Playing }] }
   };
 
@@ -203,6 +203,17 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
   const guildId = voiceChannel.guild.id;
   const state = voiceState.get(guildId) || { isJoining: false };
 
+  // Prevent re-joining the channel that the bot is already in
+  const existingConn = getVoiceConnection(guildId);
+  if (existingConn && existingConn.joinConfig.channelId == voiceChannel.id) {
+    // The bot is already connected to the requested channel, do nothing
+    if (command) {
+      // Return a specific status for command invocations
+      return 'ALREADY_PRESENT';
+    }
+    return;
+  }
+
   if (state.isJoining) {
     // already joining -- ignore duplicate attempt
     return;
@@ -311,6 +322,14 @@ async function handleVoiceStateUpdate(oldState, newState) {
       if (wasInChannel && !isNowInChannel) {
         // bot left voice; if not left on purpose, try to rejoin last known channel
         const leftOnPurpose = botLeftOnPurpose.get(guildId);
+        // Check the current state of the voice operations
+        const State = voiceState.get(guildId) || { isJoining: false };
+
+        if (State.isJoining) {
+          console.log("Bot disconnected unexpectedly, but another join process is active. Ignoring unexpected rejoin.");
+          return;
+        }
+
         if (!leftOnPurpose) {
           const lastChan = lastVoiceChannel.get(guildId);
           if (lastChan) {
@@ -369,16 +388,20 @@ client.on('interactionCreate', async interaction => {
 
     const voiceChannel = resolveVoiceChannelFromInteraction(interaction);
     if (!voiceChannel) {
-      return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, ephemeral: true });
+      return interaction.reply({ content: `Yo homie you ain't in a voice chat nigga, join one and then summon me dawg.`, flags: 64 });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
     try {
-      await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull', true);
-      return interaction.followUp({ content: `Summoned.`, ephemeral: true }).catch(() => {});
+      const joinResult = await safeJoinVoiceChannel(voiceChannel, commandName === 'summonfull', true);
+
+      if (joinResult === "ALREADY_PRESENT") {
+        return interaction.followUp({ content: `Chill nigga, I'm already in this channel!`, flags:64}).catch(() => {});
+      }
+      return interaction.followUp({ content: `No problem g, I'm coming to thirst for Doron.`, flags: 64 }).catch(() => {});
     } catch (err) {
       console.error('Command summon failed:', err);
-      return interaction.followUp({ content: `Couldn't join VC, dawg. Maybe I'm already busy or Doron be wildin'.`, ephemeral: true });
+      return interaction.followUp({ content: `Couldn't join VC, dawg. Maybe I'm already busy or Doron be wildin'.`, flags: 64 });
     }
   } catch (err) {
     console.error('Error handling interaction:', err);

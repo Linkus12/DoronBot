@@ -9,16 +9,16 @@
   "author": "Retr0",
   "license": "MIT",
   "dependencies": {
-    "@discordjs/opus": "^0.5.0",
-    "discord.js": "^14.16.3",
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.19.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@snazzah/davey": "^0.1.8",
+    "discord.js": "^14.25.1",
     "dotenv": "^10.0.0",
     "ffmpeg-static": "^4.4.0",
     "node-cron": "^3.0.0",
-    "@discordjs/voice": "^0.17.0",
-    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "sodium-native": "^4.0.0"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Linkus12/DoronBot.git"
