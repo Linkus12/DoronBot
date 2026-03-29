@@ -10,17 +10,12 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/app
 
-# Copy package files (we assume you DELETED package-lock.json already)
-COPY package.json ./
-
-# Install dependencies
-RUN npm install
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copy the rest of the code
 COPY . .
-
-# Expose port
-EXPOSE 3000
 
 # Start the bot
 CMD ["node", "index.js"]
