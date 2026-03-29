@@ -89,7 +89,7 @@ async function registerCommands() {
 function setBotPresence(mode = 'idle') {
   const presets = {
     idle: { status: 'idle', activities: [{ name: 'Looking for Doron...', type: ActivityType.Watching }] },
-    active: { status: 'online', activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom || ActivityType.Playing }] }
+    active: { status: 'online', activities: [{ name: 'Thirsting for Doron rn', type: ActivityType.Custom }] }
   };
 
   const cfg = presets[mode] || presets.idle;
@@ -208,7 +208,7 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
 
   // Prevent re-joining the channel that the bot is already in
   const existingConn = getVoiceConnection(guildId);
-  if (existingConn && existingConn.joinConfig.channelId == voiceChannel.id) {
+  if (existingConn && existingConn.joinConfig.channelId === voiceChannel.id) {
     // The bot is already connected to the requested channel, do nothing
     if (command) {
       // Return a specific status for command invocations
@@ -245,7 +245,7 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
       channelId: voiceChannel.id,
       guildId,
       adapterCreator: voiceChannel.guild.voiceAdapterCreator,
-      selfDeaf: false
+      selfDeaf: true
     });
 
     // Save connection reference
@@ -328,9 +328,9 @@ async function handleVoiceStateUpdate(oldState, newState) {
         // bot left voice; if not left on purpose, try to rejoin last known channel
         const leftOnPurpose = botLeftOnPurpose.get(guildId);
         // Check the current state of the voice operations
-        const State = voiceState.get(guildId) || { isJoining: false };
+        const currentState = voiceState.get(guildId) || { isJoining: false };
 
-        if (State.isJoining) {
+        if (currentState.isJoining) {
           console.log("Bot disconnected unexpectedly, but another join process is active. Ignoring unexpected rejoin.");
           return;
         }
@@ -425,7 +425,7 @@ client.once('clientReady', async () => {
   try {
     for (const guild of client.guilds.cache.values()) {
       try {
-        if (!TARGET_USER_ID) return; // Skip if no target set
+        if (!TARGET_USER_ID) break; // Skip if no target set
         const member = await guild.members.fetch(TARGET_USER_ID).catch(() => null);
         if (member && member.voice && member.voice.channel) {
           console.log(`Doron is in voice in guild ${guild.name} — joining...`);
@@ -443,6 +443,22 @@ client.once('clientReady', async () => {
 });
 
 client.on('voiceStateUpdate', handleVoiceStateUpdate);
+
+/* --------------- Graceful shutdown --------------- */
+function gracefulShutdown(signal) {
+  console.log(`Received ${signal}. Shutting down gracefully...`);
+  for (const guildId of audioPlayers.keys()) {
+    try {
+      const conn = getVoiceConnection(guildId);
+      if (conn) conn.destroy();
+    } catch (e) { /* ignore */ }
+  }
+  client.destroy();
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 /* -------------------- Start ------------------------ */
 client.login(TOKEN).catch(err => {
