@@ -40,9 +40,9 @@ const DEFAULT_FULL_AUDIO = path.join(audioDirectory, 'DORON.mp3');
 const voiceState = new Map();            // guildId => { isJoining: bool, connection }
 const lastVoiceChannel = new Map();      // guildId => VoiceChannel
 const botLeftOnPurpose = new Map();      // guildId => bool
-let lastAudioPath = null;
-let debounce = false;
-let audioPlayer = null;
+const audioPlayers = new Map();       // guildId => AudioPlayer
+const lastAudioPaths = new Map();     // guildId => string
+const debounceState = new Map();      // guildId => bool
 
 /* ------------------- Discord client -------------- */
 const client = new Client({
@@ -111,23 +111,25 @@ function listAudioFiles() {
   }
 }
 
-function pickRandomAudio() {
+function pickRandomAudio(guildId) {
   const files = listAudioFiles();
   if (files.length === 0) {
     console.warn('No .mp3 files found in audio directory.');
     return null;
   }
   if (files.length === 1) {
-    lastAudioPath = path.join(audioDirectory, files[0]);
-    return lastAudioPath;
+    const filePath = path.join(audioDirectory, files[0]);
+    lastAudioPaths.set(guildId, filePath);
+    return filePath;
   }
 
   let selected;
+  const lastPath = lastAudioPaths.get(guildId);
   do {
     selected = path.join(audioDirectory, files[Math.floor(Math.random() * files.length)]);
-  } while (files.length > 1 && selected === lastAudioPath);
+  } while (files.length > 1 && selected === lastPath);
 
-  lastAudioPath = selected;
+  lastAudioPaths.set(guildId, selected);
   return selected;
 }
 
@@ -147,13 +149,13 @@ function createResourceForFile(filePath) {
 }
 
 function ensureAudioPlayer(guildId) {
-  if (audioPlayer) return audioPlayer;
+  const existing = audioPlayers.get(guildId);
+  if (existing) return existing;
 
-  audioPlayer = createAudioPlayer();
+  const player = createAudioPlayer();
 
-  audioPlayer.on(AudioPlayerStatus.Idle, () => {
+  player.on(AudioPlayerStatus.Idle, () => {
     try {
-      // When done, destroy connection and reset
       const conn = getVoiceConnection(guildId);
       if (conn) {
         botLeftOnPurpose.set(guildId, true);
@@ -162,20 +164,21 @@ function ensureAudioPlayer(guildId) {
     } catch (err) {
       console.warn('Error cleaning up after audio idle:', err);
     } finally {
-      audioPlayer = null;
-      debounce = false;
+      audioPlayers.delete(guildId);
+      debounceState.delete(guildId);
       setBotPresence('idle');
     }
   });
 
-  audioPlayer.on('error', err => {
+  player.on('error', err => {
     console.error('Audio player error:', err?.message || err);
-    audioPlayer = null;
-    debounce = false;
+    audioPlayers.delete(guildId);
+    debounceState.delete(guildId);
     setBotPresence('idle');
   });
 
-  return audioPlayer;
+  audioPlayers.set(guildId, player);
+  return player;
 }
 
 /* ------------------ Join & Play ------------------- */
@@ -268,38 +271,40 @@ async function safeJoinVoiceChannel(voiceChannel, full = false, command = false)
 async function playAudioInChannel(channel, full = false) {
   if (!channel) throw new Error('No channel to play audio in.');
 
-  if (debounce) return;          // prevent spam
-  debounce = true;
-  setTimeout(() => { debounce = false; }, TimeoutDuration);
+  const guildId = channel.guild.id;
+
+  if (debounceState.get(guildId)) return;   // prevent spam
+  debounceState.set(guildId, true);
+  setTimeout(() => { debounceState.delete(guildId); }, TimeoutDuration);
 
   setBotPresence('active');
 
-  const player = ensureAudioPlayer(channel.guild.id);
+  const player = ensureAudioPlayer(guildId);
 
-  const audioFile = full ? DEFAULT_FULL_AUDIO : pickRandomAudio();
+  const audioFile = full ? DEFAULT_FULL_AUDIO : pickRandomAudio(guildId);
   if (!audioFile) {
     console.error('No audio file chosen; aborting play.');
-    debounce = false;
+    debounceState.delete(guildId);
     setBotPresence('idle');
     return;
   }
 
   const resource = createResourceForFile(audioFile);
   if (!resource) {
-    debounce = false;
+    debounceState.delete(guildId);
     setBotPresence('idle');
     return;
   }
 
   try {
     // If already connected, subscribe; otherwise subscription happens automatically via createAudioPlayer usage
-    const existingConn = getVoiceConnection(channel.guild.id);
+    const existingConn = getVoiceConnection(guildId);
     if (existingConn) existingConn.subscribe(player);
 
     player.play(resource);
   } catch (err) {
     console.error('Failed to play audio:', err?.message || err);
-    debounce = false;
+    debounceState.delete(guildId);
     setBotPresence('idle');
   }
 }
