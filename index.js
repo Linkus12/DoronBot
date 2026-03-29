@@ -447,7 +447,7 @@ client.on('voiceStateUpdate', handleVoiceStateUpdate);
 /* --------------- Graceful shutdown --------------- */
 function gracefulShutdown(signal) {
   console.log(`Received ${signal}. Shutting down gracefully...`);
-  for (const guildId of audioPlayers.keys()) {
+  for (const guildId of voiceState.keys()) {
     try {
       const conn = getVoiceConnection(guildId);
       if (conn) conn.destroy();
